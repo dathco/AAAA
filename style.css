@@ -1,0 +1,261 @@
+/* =================================================================
+   Theme-Variablen — werden je nach data-theme umgeschaltet
+   ================================================================= */
+
+:root {
+  --bg: #f8fafc;
+  --card-bg: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --heading: #1e293b;
+  --border: #cbd5e1;
+  --border-light: #e2e8f0;
+  --button-bg: #1e293b;
+  --button-hover: #0f172a;
+  --button-text: #ffffff;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --focus-ring: rgba(71, 85, 105, 0.15);
+  --focus-border: #475569;
+  --danger: #ef4444;
+  --danger-border: #fca5a5;
+  --danger-bg: #fee2e2;
+}
+
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+  --heading: #f8fafc;
+  --border: #475569;
+  --border-light: #334155;
+  --button-bg: #f1f5f9;
+  --button-hover: #ffffff;
+  --button-text: #0f172a;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --focus-ring: rgba(203, 213, 225, 0.2);
+  --focus-border: #cbd5e1;
+  --danger: #f87171;
+  --danger-border: #b91c1c;
+  --danger-bg: #450a0a;
+}
+
+/* =================================================================
+   Globale Resets und Schriftart
+   ================================================================= */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: background 0.2s, color 0.2s;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  position: relative;
+}
+
+/* =================================================================
+   Theme-Toggle (oben rechts)
+   ================================================================= */
+
+.theme-toggle {
+  position: absolute;
+  top: 1.5rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.05);
+}
+
+/* =================================================================
+   Header
+   ================================================================= */
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  color: var(--heading);
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+}
+
+/* =================================================================
+   Karten / Sektionen
+   ================================================================= */
+
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  transition: background 0.2s;
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+}
+
+/* =================================================================
+   Formular
+   ================================================================= */
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+input,
+textarea {
+  margin-top: 0.25rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+button[type="submit"] {
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 0.75rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button[type="submit"]:hover {
+  background: var(--button-hover);
+}
+
+/* =================================================================
+   Notizen-Liste
+   ================================================================= */
+
+ul {
+  list-style: none;
+}
+
+.note-item {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.note-item:last-child {
+  border-bottom: none;
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.note-title {
+  font-weight: 600;
+  color: var(--heading);
+  font-size: 1.05rem;
+}
+
+.note-content {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+}
+
+.note-date {
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  margin-top: 0.4rem;
+}
+
+.delete-btn {
+  background: transparent;
+  color: var(--danger);
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--danger-border);
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.delete-btn:hover {
+  background: var(--danger-bg);
+}
+
+.muted {
+  color: var(--text-faint);
+  font-style: italic;
+  text-align: center;
+}
+
+.hidden {
+  display: none;
+}

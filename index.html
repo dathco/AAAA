@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notizen-App</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <!-- Theme-Toggle oben rechts -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Theme wechseln">
+      <span class="theme-icon">🌙</span>
+    </button>
+
+    <header>
+      <h1>Notizen</h1>
+      <p class="subtitle">Mein erstes Projekt.</p>
+    </header>
+
+    <!-- Formular für neue Notizen -->
+    <section class="card">
+      <h2>Neue Notiz</h2>
+      <form id="note-form">
+        <label>
+          Titel
+          <input type="text" id="title" placeholder="z.B. Einkaufsliste" required />
+        </label>
+        <label>
+          Text
+          <textarea id="content" rows="3" placeholder="Worum geht's?" required></textarea>
+        </label>
+        <button type="submit">Notiz speichern</button>
+      </form>
+    </section>
+
+    <!-- Liste aller Notizen -->
+    <section class="card">
+      <h2>Deine Notizen</h2>
+      <ul id="note-list">
+        <!-- wird per JS gefüllt -->
+      </ul>
+      <p id="empty-state" class="muted">Noch keine Notizen vorhanden.</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
