@@ -39,7 +39,8 @@ const FOCUS_TYPES = [
   { id: "creative", icon: "🎨", title: "Kreativ" },
 ];
 
-const DURATIONS = [15, 25, 45, 60, 90, 120]; // Minuten
+// Reise-Geschwindigkeit (km/h): wandelt Fokus-Dauer in Flug-Reichweite um
+const AVG_SPEED_KMH = 900;
 
 // Rang-Stufen nach Gesamtmeilen
 const RANKS = [
@@ -57,10 +58,10 @@ const STORAGE_KEY = "focusflight_v1";
 // Auswahl der aktuellen Buchung
 const selection = {
   from: "FRA",
-  to: "JFK",
+  to: "LHR",
   seat: "economy",
   focus: "work",
-  duration: 25,
+  duration: 45,
 };
 
 // Laufender Flug (Timer-Referenzen)
@@ -119,6 +120,17 @@ function distanceKm(a, b) {
 // Meilen einer Session = Minuten * Klassen-Multiplikator
 function milesFor(durationMin, seatId) {
   return Math.round(durationMin * seatById(seatId).mult);
+}
+
+// Reichweite (km), die in der gewaehlten Fokus-Dauer erreichbar ist
+function reachKm() {
+  return Math.round((selection.duration / 60) * AVG_SPEED_KMH);
+}
+
+// Ist ein Flughafen vom Abflug aus in der Fokus-Zeit erreichbar?
+function isReachable(code) {
+  if (code === selection.from) return true;
+  return distanceKm(airportByCode(selection.from), airportByCode(code)) <= reachKm();
 }
 
 // Aktueller Rang anhand der Gesamtmeilen
@@ -186,14 +198,16 @@ function renderRoutePreview() {
 
 // Markierung eines Flughafens auf dem Globus: Apple-Pin (gewaehlt) oder Punkt.
 // screen = {x, y} ist die bereits projizierte Bildschirmposition.
-function airportMarkerSVG(code, screen, role) {
+// out=true blendet ausser Reichweite liegende Flughaefen ab.
+function airportMarkerSVG(code, screen, role, out) {
   const x = screen.x, y = screen.y;
   const labelX = Math.max(20, Math.min(x + 12, 560));
+  const cls = "ap" + (role ? " " + role : "") + (out ? " out" : "");
   if (role) {
     // Tropfenfoermiger Pin mit Spitze direkt auf dem Flughafen
     const pin = `M ${x.toFixed(1)} ${y.toFixed(1)} L ${(x - 6).toFixed(1)} ${(y - 16).toFixed(1)} A 9 9 0 1 1 ${(x + 6).toFixed(1)} ${(y - 16).toFixed(1)} Z`;
     return `
-      <g class="ap ${role}" data-code="${code}">
+      <g class="${cls}" data-code="${code}">
         <circle class="ap-hit" cx="${x.toFixed(1)}" cy="${(y - 14).toFixed(1)}" r="26" />
         <path class="ap-pin" d="${pin}" />
         <circle class="ap-pin-dot" cx="${x.toFixed(1)}" cy="${(y - 22).toFixed(1)}" r="3.4" />
@@ -201,26 +215,34 @@ function airportMarkerSVG(code, screen, role) {
       </g>`;
   }
   return `
-    <g class="ap" data-code="${code}">
+    <g class="${cls}" data-code="${code}">
       <circle class="ap-hit" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="22" />
       <circle class="ap-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" />
       <text class="ap-code" x="${labelX}" y="${(y - 7).toFixed(1)}">${code}</text>
     </g>`;
 }
 
-// Wird vom Buchungs-Globus bei jeder Drehung aufgerufen: Route + Pins zeichnen
+// Wird vom Buchungs-Globus bei jeder Drehung aufgerufen: Reichweite, Route, Pins
 function renderBookingGlobe(g) {
   const from = airportByCode(selection.from);
   const to = airportByCode(selection.to);
+
+  // Reichweiten-Ring um den Abflughafen (Kleinkreis auf der Kugel)
+  const reach = reachCirclePoints(from.lon, from.lat, reachKm());
+  $("#booking-reach").setAttribute("d", reach ? g.buildPath(reach) : "");
+
+  // Aktuelle Flugroute
   const arc = greatCircleArc({ lon: from.lon, lat: from.lat }, { lon: to.lon, lat: to.lat });
   $("#booking-route").setAttribute("d", g.buildPath(arc));
 
-  // Nur sichtbare (vordere) Flughaefen als anklickbare Marker zeichnen
+  // Nur sichtbare (vordere) Flughaefen als anklickbare Marker zeichnen;
+  // ausser Reichweite liegende werden abgeblendet.
   $("#booking-airports").innerHTML = AIRPORTS.map((a) => {
     const s = g.project(a.lon, a.lat);
     if (!s.visible) return "";
     const role = a.code === selection.from ? "is-from" : a.code === selection.to ? "is-to" : "";
-    return airportMarkerSVG(a.code, s, role);
+    const out = !role && !isReachable(a.code);
+    return airportMarkerSVG(a.code, s, role, out);
   }).join("");
 }
 
@@ -276,14 +298,26 @@ function syncRouteUI() {
   $("#select-to").value = selection.to;
   if (bookingGlobe) bookingGlobe.render();
   renderRoutePreview();
+  updateReachInfo();
   updateMapHint();
 }
 
-// Globus so drehen, dass Abflug und Ziel gut sichtbar sind
-function recenterBookingGlobe() {
+// Globus auf den Abflughafen zentrieren (Reichweiten-Ring liegt dann mittig)
+function recenterToOrigin() {
   if (!bookingGlobe) return;
-  const mid = midpointOf(selection.from, selection.to);
-  bookingGlobe.setCenter(mid.lon, mid.lat);
+  const from = airportByCode(selection.from);
+  bookingGlobe.setCenter(from.lon, from.lat);
+}
+
+// Reichweiten-Hinweis: Distanz + Anzahl erreichbarer Flughaefen
+function updateReachInfo() {
+  const reach = reachKm();
+  const count = AIRPORTS.filter((a) => a.code !== selection.from && isReachable(a.code)).length;
+  const targetReachable = isReachable(selection.to);
+  $("#reach-info").innerHTML =
+    `Reichweite: <b>~${reach.toLocaleString("de-DE")} km</b> · ` +
+    `${count} ${count === 1 ? "Flughafen" : "Flughaefen"} erreichbar` +
+    (targetReachable ? "" : ` · <span class="reach-warn">Ziel ausserhalb der Reichweite</span>`);
 }
 
 // Baut die Sitzklassen-Karten
@@ -307,16 +341,6 @@ function renderFocusGrid() {
       <div class="pc-icon">${f.icon}</div>
       <div class="pc-title">${f.title}</div>
     </div>`
-  ).join("");
-}
-
-// Baut die Dauer-Chips
-function renderDurationOptions() {
-  $("#duration-options").innerHTML = DURATIONS.map(
-    (d) => `
-    <button class="dur-chip ${d === selection.duration ? "is-selected" : ""}" data-dur="${d}">
-      ${d} min
-    </button>`
   ).join("");
 }
 
@@ -595,6 +619,7 @@ function wireEvents() {
       if (code === selection.to) selection.to = selection.from;
       selection.from = code;
       pickMode = "to";
+      recenterToOrigin(); // Reichweiten-Ring um den neuen Abflug zentrieren
     } else {
       if (code === selection.from) selection.from = selection.to;
       selection.to = code;
@@ -603,23 +628,31 @@ function wireEvents() {
     syncRouteUI();
   });
 
+  // Schritt 1: Fokus-Dauer-Regler bestimmt die Reichweite
+  $("#duration-range").addEventListener("input", (e) => {
+    selection.duration = Number(e.target.value);
+    $("#duration-value").textContent = `${selection.duration} min`;
+    if (bookingGlobe) bookingGlobe.render();
+    updateReachInfo();
+  });
+
   // Schritt 1: Dropdowns als praezise Alternative (mit Tausch bei Konflikt)
   $("#select-from").addEventListener("change", (e) => {
     const v = e.target.value;
     if (v === selection.to) selection.to = selection.from;
     selection.from = v;
-    recenterBookingGlobe();
+    recenterToOrigin();
     syncRouteUI();
   });
   $("#select-to").addEventListener("change", (e) => {
     const v = e.target.value;
     if (v === selection.from) selection.from = selection.to;
     selection.to = v;
-    recenterBookingGlobe();
     syncRouteUI();
   });
   $("#swap-btn").addEventListener("click", () => {
     [selection.from, selection.to] = [selection.to, selection.from];
+    recenterToOrigin();
     syncRouteUI();
   });
   $("#to-seat-btn").addEventListener("click", () => {
@@ -640,22 +673,15 @@ function wireEvents() {
   });
   $("#to-focus-btn").addEventListener("click", () => {
     renderFocusGrid();
-    renderDurationOptions();
     showStep("focus");
   });
 
-  // Schritt 3: Fokus & Dauer (Delegation)
+  // Schritt 3: Fokus-Art (Delegation)
   $("#focus-grid").addEventListener("click", (e) => {
     const card = e.target.closest("[data-focus]");
     if (!card) return;
     selection.focus = card.dataset.focus;
     renderFocusGrid();
-  });
-  $("#duration-options").addEventListener("click", (e) => {
-    const chip = e.target.closest("[data-dur]");
-    if (!chip) return;
-    selection.duration = Number(chip.dataset.dur);
-    renderDurationOptions();
   });
   $("#to-confirm-btn").addEventListener("click", () => {
     renderBoardingPass();
@@ -695,11 +721,11 @@ function wireEvents() {
 
 // Erzeugt die beiden Globen (Buchung interaktiv, Flug folgt der Route)
 function setupGlobes() {
-  const start = midpointOf(selection.from, selection.to);
+  const origin = airportByCode(selection.from);
   bookingGlobe = createGlobe({
     landEl: $("#booking-land"),
     radius: 285, cx: 300, cy: 300,
-    center: { lon: start.lon, lat: start.lat },
+    center: { lon: origin.lon, lat: origin.lat }, // Reichweiten-Ring mittig
     target: $("#booking-globe"),
     interactive: true,
     onRender: renderBookingGlobe,
@@ -707,7 +733,7 @@ function setupGlobes() {
   flightGlobe = createGlobe({
     landEl: $("#flight-land"),
     radius: 285, cx: 300, cy: 300,
-    center: { lon: start.lon, lat: start.lat },
+    center: { lon: origin.lon, lat: origin.lat },
     target: $("#flight-globe"),
     interactive: true,
     onRender: renderFlightGlobe,
@@ -716,6 +742,9 @@ function setupGlobes() {
 
 function init() {
   fillAirportSelects();
+  // Slider auf die Standard-Dauer einstellen
+  $("#duration-range").value = selection.duration;
+  $("#duration-value").textContent = `${selection.duration} min`;
   setupGlobes();
   syncRouteUI(); // Globus, Dropdowns und Vorschau aufbauen
   renderHeader();

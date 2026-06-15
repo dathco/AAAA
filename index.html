@@ -58,6 +58,7 @@
             <circle cx="300" cy="300" r="285" fill="url(#globe-sea-b)" />
             <g clip-path="url(#globe-clip-b)">
               <path id="booking-land" class="globe-land" />
+              <path id="booking-reach" class="globe-reach" />
               <path id="booking-route-bg" class="globe-route-bg" />
               <path id="booking-route" class="globe-route" />
             </g>
@@ -67,6 +68,16 @@
           </svg>
         </div>
         <p class="map-sub">Drehen: mit dem Finger ziehen · Antippen zum Auswaehlen</p>
+
+        <!-- Fokus-Dauer als Regler: bestimmt die Flug-Reichweite -->
+        <div class="duration-slider">
+          <div class="ds-row">
+            <span class="field-label">Fokus-Dauer</span>
+            <span class="ds-value" id="duration-value">45 min</span>
+          </div>
+          <input type="range" id="duration-range" min="15" max="300" step="15" value="45" />
+          <p class="ds-reach" id="reach-info"></p>
+        </div>
 
         <div class="route-pickers">
           <label class="field">
@@ -102,18 +113,13 @@
         </div>
       </div>
 
-      <!-- Schritt 3: Fokus-Art und Dauer -->
+      <!-- Schritt 3: Fokus-Art (Dauer kommt aus dem Regler in Schritt 1) -->
       <div class="step" data-step="focus">
-        <h2 class="step-title">3 · Fokus & Dauer</h2>
-        <p class="step-hint">Die Flugdauer ist deine Fokuszeit.</p>
+        <h2 class="step-title">3 · Fokus-Art</h2>
+        <p class="step-hint">Woran arbeitest du auf diesem Flug?</p>
 
         <div class="focus-grid" id="focus-grid">
           <!-- Fokus-Arten werden per JS eingefuegt -->
-        </div>
-
-        <div class="duration-block">
-          <span class="field-label">Flugdauer</span>
-          <div class="duration-options" id="duration-options"></div>
         </div>
 
         <div class="step-nav">

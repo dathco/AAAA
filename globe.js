@@ -52,6 +52,27 @@ function greatCircleArc(a, b, n = 60) {
   return pts;
 }
 
+// Punkte eines "Kleinkreises": alle Orte im Abstand radiusKm um (cLon,cLat).
+// Ergibt den Reichweiten-Ring auf der Kugel. Liefert [lon,lat]-Paare oder
+// null, wenn die Reichweite die halbe Erde uebersteigt (alles erreichbar).
+function reachCirclePoints(cLon, cLat, radiusKm, n = 90) {
+  const EARTH = 6371;
+  const ang = radiusKm / EARTH; // Winkeldistanz in Radiant
+  if (ang >= Math.PI) return null;
+  const la1 = cLat * DEG, lo1 = cLon * DEG;
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const b = (i / n) * 2 * Math.PI; // Peilung rundherum
+    const la2 = Math.asin(Math.sin(la1) * Math.cos(ang) + Math.cos(la1) * Math.sin(ang) * Math.cos(b));
+    const lo2 = lo1 + Math.atan2(
+      Math.sin(b) * Math.sin(ang) * Math.cos(la1),
+      Math.cos(ang) - Math.sin(la1) * Math.sin(la2)
+    );
+    pts.push([lo2 / DEG, la2 / DEG]);
+  }
+  return pts;
+}
+
 // Erzeugt einen interaktiven Globus an einer SVG-Flaeche.
 // config: { landEl, center:{lon,lat}, radius, cx, cy, target (svg/Element fuer Drag),
 //           interactive, onRender(api) }
