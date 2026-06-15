@@ -1,56 +1,33 @@
-# Erstes Projekt — Notizen-App
+# ✈ FocusFlight (privat)
 
-Ein winziges Lernprojekt: eine kleine Notizen-App im Browser.
-Klein gehalten, damit du **alle Basics** (HTML, JS, Git, GitHub, Claude Code) an einem echten Beispiel lernen kannst.
+Ein privater Nachbau der App **FocusFlight** — ein Fokus-Timer im Flug-Look.
+Statt einer nüchternen Stoppuhr "buchst" du einen Flug: Route wählen, Sitz
+buchen, abheben und fokussiert arbeiten, während dein Flugzeug über die Karte
+zieht. Für abgeschlossene Sessions gibt es Meilen, Tickets und Ränge.
 
-## Lernziele
+## Features
 
-Nach diesem Projekt verstehst du:
+- **Buchungs-Flow** in 4 Schritten: Route → Sitz → Fokus & Dauer → Boarding-Pass
+- **Route einsehen**: Weltkarte mit gebogener Flugroute und animiertem Flugzeug
+- **Sitz buchen**: Economy (×1), Business (×1.5), First (×2 Meilen)
+- **Fokus-Timer**: Dauer 15–120 min mit Fortschrittsbalken
+- **Pause** & **Notlandung** (Abbruch ohne Meilen)
+- **Meilen & Ränge**: Economy Flyer → Silver → Gold → Platinum → Diamond
+- **Tickets / Logbuch**: alle abgeschlossenen Flüge
+- **Statistik**: Flüge, Meilen, Fokuszeit, beliebteste Routen
+- **Reload-sicher**: ein laufender Flug wird nach Neuladen fortgesetzt
 
-1. Wie man ein **Repository** erstellt (lokal mit Git + remote auf GitHub)
-2. Was **Commits** sind und wie man sie schreibt
-3. Wie man eine `CLAUDE.md` für Claude Code nutzt
-4. Wie man **Branches** für neue Features anlegt
-5. Wie man ein simples **Frontend-Projekt** strukturiert
-6. Wie man **Skills & Plugins** in Claude Code installiert
+Alle Daten bleiben lokal im Browser (`localStorage`) — kein Server, kein Account.
 
-## Was das Projekt macht
+## Starten
 
-Eine einzelne HTML-Seite, auf der du:
-- Notizen mit Titel und Text anlegst
-- Notizen als Liste siehst
-- Notizen wieder löschen kannst
-- Alles bleibt lokal im Browser gespeichert (`localStorage`)
+Einfach `index.html` per Doppelklick im Browser öffnen. Kein Build, keine
+Installation.
 
-## Schritt-für-Schritt-Anleitung
+## Tech
 
-Folge `STEPS.md` — dort steht alles in der richtigen Reihenfolge.
+Vanilla HTML / CSS / JavaScript. Keine Frameworks, keine Dependencies.
 
-## Übersicht der Dateien
+## Nicht enthalten
 
-```
-erstes projekt/
-├── README.md          ← Du bist hier
-├── STEPS.md           ← Die Schritt-für-Schritt-Anleitung
-├── RESOURCES.md       ← Übersichten & Links zu Skills/Plugins
-├── CLAUDE.md          ← Kontext für Claude Code
-├── .gitignore         ← Was Git ignorieren soll
-├── index.html         ← Die App
-├── style.css          ← Styling
-└── app.js             ← Die Logik
-```
-
-## ⚠️ Wichtig: Leerzeichen im Ordnernamen
-
-Dein Ordner heißt `erstes projekt` — mit einem Leerzeichen. Das ist im Terminal etwas knifflig.
-Bei jedem `cd`-Befehl musst du den Pfad in Anführungszeichen setzen:
-
-```bash
-cd ~/Desktop/"erstes projekt"
-# oder
-cd "~/Desktop/erstes projekt"
-# oder mit Backslash
-cd ~/Desktop/erstes\ projekt
-```
-
-In `STEPS.md` ist das überall richtig gesetzt — einfach copy & paste.
+Bewusst weggelassene Premium-Spielereien wie die "aus dem Fenster gucken"-Ansicht.

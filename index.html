@@ -3,44 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Notizen-App</title>
+  <title>FocusFlight — Dein Fokus hebt ab</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="container">
-    <!-- Theme-Toggle oben rechts -->
-    <button id="theme-toggle" class="theme-toggle" aria-label="Theme wechseln">
-      <span class="theme-icon">🌙</span>
-    </button>
+  <!-- Kopfzeile: App-Name, Meilen-Stand und Navigation -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-logo">✈</span>
+      <span class="brand-name">FocusFlight</span>
+    </div>
 
-    <header>
-      <h1>Notizen</h1>
-      <p class="subtitle">Mein erstes Projekt.</p>
-    </header>
+    <div class="header-right">
+      <div class="miles-badge" title="Gesammelte Meilen">
+        <span class="miles-icon">★</span>
+        <span id="miles-total">0</span>
+        <span class="miles-label">Meilen</span>
+      </div>
+      <div class="rank-badge" id="rank-badge">Economy Flyer</div>
+    </div>
+  </header>
 
-    <!-- Formular für neue Notizen -->
-    <section class="card">
-      <h2>Neue Notiz</h2>
-      <form id="note-form">
-        <label>
-          Titel
-          <input type="text" id="title" placeholder="z.B. Einkaufsliste" required />
-        </label>
-        <label>
-          Text
-          <textarea id="content" rows="3" placeholder="Worum geht's?" required></textarea>
-        </label>
-        <button type="submit">Notiz speichern</button>
-      </form>
+  <!-- Hauptnavigation zwischen den Ansichten -->
+  <nav class="tabbar">
+    <button class="tab is-active" data-screen="booking">Buchen</button>
+    <button class="tab" data-screen="tickets">Tickets</button>
+    <button class="tab" data-screen="stats">Statistik</button>
+  </nav>
+
+  <main>
+    <!-- ======================= BUCHUNG ======================= -->
+    <section id="screen-booking" class="screen is-active">
+
+      <!-- Schritt 1: Route waehlen -->
+      <div class="step is-active" data-step="route">
+        <h2 class="step-title">1 · Route waehlen</h2>
+        <p class="step-hint">Wohin soll dein Fokus fliegen?</p>
+
+        <div class="route-pickers">
+          <label class="field">
+            <span class="field-label">Abflug</span>
+            <select id="select-from"></select>
+          </label>
+
+          <button id="swap-btn" class="swap-btn" title="Tauschen">⇅</button>
+
+          <label class="field">
+            <span class="field-label">Ziel</span>
+            <select id="select-to"></select>
+          </label>
+        </div>
+
+        <div class="route-preview" id="route-preview"></div>
+
+        <button class="primary-btn" id="to-seat-btn">Weiter zur Sitzwahl</button>
+      </div>
+
+      <!-- Schritt 2: Sitzklasse waehlen -->
+      <div class="step" data-step="seat">
+        <h2 class="step-title">2 · Sitz buchen</h2>
+        <p class="step-hint">Hoehere Klassen bringen mehr Meilen.</p>
+
+        <div class="seat-grid" id="seat-grid">
+          <!-- Sitzklassen-Karten werden per JS eingefuegt -->
+        </div>
+
+        <div class="step-nav">
+          <button class="ghost-btn" data-goto="route">Zurueck</button>
+          <button class="primary-btn" id="to-focus-btn">Weiter</button>
+        </div>
+      </div>
+
+      <!-- Schritt 3: Fokus-Art und Dauer -->
+      <div class="step" data-step="focus">
+        <h2 class="step-title">3 · Fokus & Dauer</h2>
+        <p class="step-hint">Die Flugdauer ist deine Fokuszeit.</p>
+
+        <div class="focus-grid" id="focus-grid">
+          <!-- Fokus-Arten werden per JS eingefuegt -->
+        </div>
+
+        <div class="duration-block">
+          <span class="field-label">Flugdauer</span>
+          <div class="duration-options" id="duration-options"></div>
+        </div>
+
+        <div class="step-nav">
+          <button class="ghost-btn" data-goto="seat">Zurueck</button>
+          <button class="primary-btn" id="to-confirm-btn">Boarding-Pass ansehen</button>
+        </div>
+      </div>
+
+      <!-- Schritt 4: Bestaetigung / Boarding-Pass -->
+      <div class="step" data-step="confirm">
+        <h2 class="step-title">4 · Boarding-Pass</h2>
+
+        <div class="boarding-pass" id="boarding-pass"></div>
+
+        <div class="step-nav">
+          <button class="ghost-btn" data-goto="focus">Zurueck</button>
+          <button class="primary-btn" id="depart-btn">Jetzt abheben ✈</button>
+        </div>
+      </div>
     </section>
 
-    <!-- Liste aller Notizen -->
-    <section class="card">
-      <h2>Deine Notizen</h2>
-      <ul id="note-list">
-        <!-- wird per JS gefüllt -->
-      </ul>
-      <p id="empty-state" class="muted">Noch keine Notizen vorhanden.</p>
+    <!-- ======================= FLUG LAEUFT ======================= -->
+    <section id="screen-flight" class="screen">
+      <div class="flight-route-line" id="flight-route-line"></div>
+
+      <!-- Karte mit Flugroute und animiertem Flugzeug -->
+      <div class="map-wrap">
+        <svg id="map" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="ocean" cx="50%" cy="35%" r="80%">
+              <stop offset="0%" stop-color="#16314f" />
+              <stop offset="100%" stop-color="#0a1828" />
+            </radialGradient>
+          </defs>
+          <rect x="0" y="0" width="1000" height="500" fill="url(#ocean)" />
+          <g id="map-grid"></g>
+          <path id="flight-path" fill="none" stroke="rgba(120,180,255,.35)"
+                stroke-width="2" stroke-dasharray="6 8" />
+          <path id="flight-path-done" fill="none" stroke="#5ea0ff" stroke-width="3" />
+          <circle id="dot-from" r="6" class="map-dot" />
+          <circle id="dot-to" r="6" class="map-dot map-dot--to" />
+          <text id="label-from" class="map-label"></text>
+          <text id="label-to" class="map-label"></text>
+          <g id="plane-group">
+            <text id="plane" class="plane">✈</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Timer und Fortschritt -->
+      <div class="flight-hud">
+        <div class="timer" id="timer">00:00</div>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="flight-meta" id="flight-meta"></div>
+
+        <div class="flight-controls">
+          <button class="ghost-btn" id="pause-btn">Pause</button>
+          <button class="danger-btn" id="abort-btn">Notlandung</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= ANKUNFT / ZUSAMMENFASSUNG ======================= -->
+    <section id="screen-summary" class="screen">
+      <div class="summary-card">
+        <div class="summary-emoji">🛬</div>
+        <h2 id="summary-title">Gelandet!</h2>
+        <p id="summary-sub" class="summary-sub"></p>
+        <div class="summary-miles" id="summary-miles"></div>
+        <p id="summary-rankup" class="summary-rankup"></p>
+        <button class="primary-btn" id="summary-done-btn">Neuen Flug buchen</button>
+      </div>
+    </section>
+
+    <!-- ======================= TICKETS / LOGBUCH ======================= -->
+    <section id="screen-tickets" class="screen">
+      <h2 class="screen-title">Deine Tickets</h2>
+      <p class="screen-sub" id="tickets-sub"></p>
+      <div class="ticket-list" id="ticket-list"></div>
+    </section>
+
+    <!-- ======================= STATISTIK ======================= -->
+    <section id="screen-stats" class="screen">
+      <h2 class="screen-title">Statistik</h2>
+      <div class="stats-grid" id="stats-grid"></div>
+      <h3 class="screen-subtitle">Geflogene Routen</h3>
+      <div class="route-stats" id="route-stats"></div>
+      <button class="danger-btn danger-btn--block" id="reset-btn">Alle Daten zuruecksetzen</button>
     </section>
   </main>
 
