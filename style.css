@@ -188,6 +188,43 @@ select {
 }
 .route-preview b { color: var(--text); display: block; font-size: 18px; }
 
+/* ===== Schritt 1: anklickbare Karte ===== */
+.map-hint {
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 10px;
+  min-height: 20px;
+}
+.map-wrap--pick { aspect-ratio: 2 / 1; margin-bottom: 12px; }
+.map-sub { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+
+.ap { cursor: pointer; }
+.ap-hit { fill: transparent; }
+.ap-dot {
+  fill: #7e93b5;
+  stroke: #0a1828;
+  stroke-width: 1.5;
+  transition: fill .15s;
+}
+.ap:hover .ap-dot { fill: #cfe0ff; }
+.ap-code {
+  fill: #9fb3d4;
+  font-size: 15px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.ap.is-from .ap-dot { fill: var(--gold); }
+.ap.is-to .ap-dot { fill: var(--accent); }
+.ap.is-from .ap-code,
+.ap.is-to .ap-code { fill: #fff; }
+.bm-path-bg {
+  fill: none;
+  stroke: rgba(120, 180, 255, .3);
+  stroke-width: 2;
+  stroke-dasharray: 6 8;
+}
+.bm-path { fill: none; stroke: var(--accent); stroke-width: 3; }
+
 /* ===== Schritt 2: Sitzklassen ===== */
 .seat-grid, .focus-grid { display: grid; gap: 12px; }
 .seat-grid { grid-template-columns: repeat(3, 1fr); }

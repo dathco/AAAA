@@ -68,6 +68,9 @@ let activeFlight = null;
 let tickHandle = null;
 let flightPathLength = 0;
 
+// Welcher Punkt wird beim naechsten Karten-Tipp gesetzt?
+let pickMode = "from"; // "from" oder "to"
+
 // ---------- Datenpersistenz ----------
 
 // Liest gespeicherte Daten oder liefert Startzustand
@@ -175,6 +178,55 @@ function renderRoutePreview() {
     <div><b>${from.code}</b>${from.city}</div>
     <div>✈<br><span>${dist.toLocaleString("de-DE")} km</span></div>
     <div><b>${to.code}</b>${to.city}</div>`;
+}
+
+// Zeichnet die anklickbare Buchungs-Karte (Gitter, Route, Flughaefen)
+function renderBookingMap() {
+  // Dekoratives Gitternetz
+  let grid = "";
+  for (let x = 0; x <= 1000; x += 100) grid += `<line x1="${x}" y1="0" x2="${x}" y2="500" />`;
+  for (let y = 0; y <= 500; y += 100) grid += `<line x1="0" y1="${y}" x2="1000" y2="${y}" />`;
+  $("#booking-grid").innerHTML = grid;
+
+  // Gebogene Route zwischen aktueller Auswahl
+  const p1 = project(airportByCode(selection.from));
+  const p2 = project(airportByCode(selection.to));
+  const cx = (p1.x + p2.x) / 2;
+  const cy = (p1.y + p2.y) / 2 - Math.abs(p2.x - p1.x) * 0.18 - 40;
+  const d = `M ${p1.x} ${p1.y} Q ${cx} ${cy} ${p2.x} ${p2.y}`;
+  $("#booking-path-bg").setAttribute("d", d);
+  $("#booking-path").setAttribute("d", d);
+
+  // Alle Flughaefen als anklickbare Gruppen (grosse Trefferflaeche fuer Touch)
+  $("#booking-airports").innerHTML = AIRPORTS.map((a) => {
+    const p = project(a);
+    const role = a.code === selection.from ? "is-from" : a.code === selection.to ? "is-to" : "";
+    const r = role ? 8 : 5;
+    const labelX = Math.min(p.x + 9, 955);
+    return `
+      <g class="ap ${role}" data-code="${a.code}">
+        <circle class="ap-hit" cx="${p.x}" cy="${p.y}" r="22" />
+        <circle class="ap-dot" cx="${p.x}" cy="${p.y}" r="${r}" />
+        <text class="ap-code" x="${labelX}" y="${p.y - 9}">${a.code}</text>
+      </g>`;
+  }).join("");
+}
+
+// Hinweistext: was wird als naechstes ausgewaehlt?
+function updateMapHint() {
+  $("#map-hint").textContent =
+    pickMode === "from"
+      ? "Tippe einen Flughafen fuer den Abflug ✈"
+      : "Jetzt das Ziel antippen 🎯";
+}
+
+// Karte, Dropdowns und Vorschau auf einen Stand bringen
+function syncRouteUI() {
+  $("#select-from").value = selection.from;
+  $("#select-to").value = selection.to;
+  renderBookingMap();
+  renderRoutePreview();
+  updateMapHint();
 }
 
 // Baut die Sitzklassen-Karten
@@ -504,8 +556,9 @@ function renderHeader() {
 // ---------- Buchungs-Flow zuruecksetzen ----------
 
 function resetBookingFlow() {
+  pickMode = "from";
   showStep("route");
-  renderRoutePreview();
+  syncRouteUI();
 }
 
 // ---------- Event-Verdrahtung ----------
@@ -516,20 +569,40 @@ function wireEvents() {
     t.addEventListener("click", () => showScreen(t.dataset.screen))
   );
 
-  // Schritt 1: Route
+  // Schritt 1: Flughafen auf der Karte antippen (Delegation)
+  $("#booking-airports").addEventListener("click", (e) => {
+    const g = e.target.closest(".ap");
+    if (!g) return;
+    const code = g.dataset.code;
+    if (pickMode === "from") {
+      // Bei Konflikt mit dem Ziel beide tauschen, statt zu blockieren
+      if (code === selection.to) selection.to = selection.from;
+      selection.from = code;
+      pickMode = "to";
+    } else {
+      if (code === selection.from) selection.from = selection.to;
+      selection.to = code;
+      pickMode = "from";
+    }
+    syncRouteUI();
+  });
+
+  // Schritt 1: Dropdowns als praezise Alternative (mit Tausch bei Konflikt)
   $("#select-from").addEventListener("change", (e) => {
-    selection.from = e.target.value;
-    renderRoutePreview();
+    const v = e.target.value;
+    if (v === selection.to) selection.to = selection.from;
+    selection.from = v;
+    syncRouteUI();
   });
   $("#select-to").addEventListener("change", (e) => {
-    selection.to = e.target.value;
-    renderRoutePreview();
+    const v = e.target.value;
+    if (v === selection.from) selection.from = selection.to;
+    selection.to = v;
+    syncRouteUI();
   });
   $("#swap-btn").addEventListener("click", () => {
     [selection.from, selection.to] = [selection.to, selection.from];
-    $("#select-from").value = selection.from;
-    $("#select-to").value = selection.to;
-    renderRoutePreview();
+    syncRouteUI();
   });
   $("#to-seat-btn").addEventListener("click", () => {
     if (selection.from === selection.to) {
@@ -604,7 +677,7 @@ function wireEvents() {
 
 function init() {
   fillAirportSelects();
-  renderRoutePreview();
+  syncRouteUI(); // Karte, Dropdowns und Vorschau aufbauen
   renderHeader();
   wireEvents();
   resumeIfActive(); // laufenden Flug ggf. fortsetzen
