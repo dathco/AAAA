@@ -8,7 +8,7 @@ zieht. Für abgeschlossene Sessions gibt es Meilen, Tickets und Ränge.
 ## Features
 
 - **Buchungs-Flow** in 4 Schritten: Route → Sitz → Fokus & Dauer → Boarding-Pass
-- **Route einsehen**: Weltkarte mit gebogener Flugroute und animiertem Flugzeug
+- **Route einsehen**: drehbarer 3D-Globus (wie Apple Karten) mit Flugroute und animiertem Flugzeug — mit dem Finger drehen, Flughäfen direkt antippen
 - **Sitz buchen**: Economy (×1), Business (×1.5), First (×2 Meilen)
 - **Fokus-Timer**: Dauer 15–120 min mit Fortschrittsbalken
 - **Pause** & **Notlandung** (Abbruch ohne Meilen)

@@ -26,7 +26,9 @@ gucken") sind bewusst weggelassen.
 
 - `index.html` — Struktur: Buchungs-Flow, Flug-Screen, Tickets, Statistik
 - `style.css` — alles Visuelle (Airline-Optik, dunkles Theme)
-- `app.js` — Logik: Buchung, Timer, Karte/Animation, Meilen, Persistenz
+- `app.js` — Logik: Buchung, Timer, Globus-Rendering, Meilen, Persistenz
+- `globe.js` — 3D-Globus (orthografische Projektion, Drag-Drehung, Grosskreise)
+- `worldmap.js` — eingebettete Weltkarte (Natural Earth, roh als lon/lat-Ringe)
 
 ## Fachliche Eckpunkte
 

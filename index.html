@@ -42,16 +42,31 @@
 
         <!-- Anklickbare Karte: Flughaefen direkt auswaehlen -->
         <p class="map-hint" id="map-hint"></p>
-        <div class="map-wrap map-wrap--pick">
-          <svg id="booking-map" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
-            <rect class="map-water" x="0" y="0" width="1000" height="500" />
-            <path id="booking-land" class="map-land" />
-            <path id="booking-path-bg" class="bm-path-bg" />
-            <path id="booking-path" class="bm-path" />
+        <div class="globe-wrap">
+          <svg id="booking-globe" viewBox="0 0 600 600">
+            <defs>
+              <radialGradient id="globe-sea-b" cx="38%" cy="32%" r="75%">
+                <stop offset="0%" stop-color="#cdeaf8" />
+                <stop offset="100%" stop-color="#7cc0e6" />
+              </radialGradient>
+              <radialGradient id="globe-shade-b" cx="36%" cy="30%" r="78%">
+                <stop offset="58%" stop-color="rgba(0,0,0,0)" />
+                <stop offset="100%" stop-color="rgba(10,30,60,.33)" />
+              </radialGradient>
+              <clipPath id="globe-clip-b"><circle cx="300" cy="300" r="285" /></clipPath>
+            </defs>
+            <circle cx="300" cy="300" r="285" fill="url(#globe-sea-b)" />
+            <g clip-path="url(#globe-clip-b)">
+              <path id="booking-land" class="globe-land" />
+              <path id="booking-route-bg" class="globe-route-bg" />
+              <path id="booking-route" class="globe-route" />
+            </g>
+            <circle cx="300" cy="300" r="285" fill="url(#globe-shade-b)" pointer-events="none" />
             <g id="booking-airports"></g>
+            <circle class="globe-rim" cx="300" cy="300" r="285" pointer-events="none" />
           </svg>
         </div>
-        <p class="map-sub">Oder genau per Liste waehlen:</p>
+        <p class="map-sub">Drehen: mit dem Finger ziehen · Antippen zum Auswaehlen</p>
 
         <div class="route-pickers">
           <label class="field">
@@ -124,21 +139,30 @@
     <section id="screen-flight" class="screen">
       <div class="flight-route-line" id="flight-route-line"></div>
 
-      <!-- Karte mit Flugroute und animiertem Flugzeug -->
-      <div class="map-wrap">
-        <svg id="map" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
-          <rect class="map-water" x="0" y="0" width="1000" height="500" />
-          <path id="flight-land" class="map-land" />
-          <path id="flight-path" fill="none" stroke="rgba(40,110,210,.45)"
-                stroke-width="2" stroke-dasharray="6 8" />
-          <path id="flight-path-done" fill="none" stroke="#2e7df0" stroke-width="3" />
-          <circle id="dot-from" r="6" class="map-dot" />
-          <circle id="dot-to" r="6" class="map-dot map-dot--to" />
-          <text id="label-from" class="map-label"></text>
-          <text id="label-to" class="map-label"></text>
-          <g id="plane-group">
-            <text id="plane" class="plane">✈</text>
+      <!-- 3D-Globus mit Flugroute und animiertem Flugzeug -->
+      <div class="globe-wrap">
+        <svg id="flight-globe" viewBox="0 0 600 600">
+          <defs>
+            <radialGradient id="globe-sea-f" cx="38%" cy="32%" r="75%">
+              <stop offset="0%" stop-color="#cdeaf8" />
+              <stop offset="100%" stop-color="#7cc0e6" />
+            </radialGradient>
+            <radialGradient id="globe-shade-f" cx="36%" cy="30%" r="78%">
+              <stop offset="58%" stop-color="rgba(0,0,0,0)" />
+              <stop offset="100%" stop-color="rgba(10,30,60,.33)" />
+            </radialGradient>
+            <clipPath id="globe-clip-f"><circle cx="300" cy="300" r="285" /></clipPath>
+          </defs>
+          <circle cx="300" cy="300" r="285" fill="url(#globe-sea-f)" />
+          <g clip-path="url(#globe-clip-f)">
+            <path id="flight-land" class="globe-land" />
+            <path id="flight-route-bg" class="globe-route-bg" />
+            <path id="flight-route-done" class="globe-route" />
           </g>
+          <circle cx="300" cy="300" r="285" fill="url(#globe-shade-f)" pointer-events="none" />
+          <g id="flight-markers"></g>
+          <g id="plane-group"><text id="plane" class="plane">✈</text></g>
+          <circle class="globe-rim" cx="300" cy="300" r="285" pointer-events="none" />
         </svg>
       </div>
 
@@ -185,6 +209,7 @@
   </main>
 
   <script src="worldmap.js"></script>
+  <script src="globe.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

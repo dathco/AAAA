@@ -188,31 +188,50 @@ select {
 }
 .route-preview b { color: var(--text); display: block; font-size: 18px; }
 
-/* ===== Schritt 1: anklickbare Karte ===== */
+/* ===== Schritt 1: 3D-Globus ===== */
 .map-hint {
   color: var(--accent);
   font-weight: 600;
   margin: 0 0 10px;
   min-height: 20px;
 }
-.map-wrap--pick { aspect-ratio: 2 / 1; margin-bottom: 12px; }
-.map-sub { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+.map-sub { color: var(--muted); font-size: 13px; margin: 8px 0 8px; text-align: center; }
 
+/* Globus-Container (quadratisch, zentriert) */
+.globe-wrap { max-width: 380px; margin: 0 auto; }
+#booking-globe, #flight-globe {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: none;        /* Drag dreht den Globus statt zu scrollen */
+  cursor: grab;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, .35));
+}
+#booking-globe:active { cursor: grabbing; }
+
+/* Apple-Look: cremefarbenes Land, blaue Route */
+.globe-land { fill: #f3f0e8; stroke: #d7cfbd; stroke-width: .5; }
+.globe-rim { fill: none; stroke: rgba(10, 30, 60, .35); stroke-width: 1.5; }
+.globe-route { fill: none; stroke: #2e7df0; stroke-width: 3.5; stroke-linecap: round; }
+.globe-route-bg {
+  fill: none;
+  stroke: rgba(40, 110, 210, .45);
+  stroke-width: 2.5;
+  stroke-dasharray: 5 8;
+  stroke-linecap: round;
+}
+
+/* Flughafen-Marker auf dem Globus */
 .ap { cursor: pointer; }
 .ap-hit { fill: transparent; }
-.ap-dot {
-  fill: #5a6b86;
-  stroke: #fff;
-  stroke-width: 1.5;
-  transition: fill .15s;
-}
+.ap-dot { fill: #5a6b86; stroke: #fff; stroke-width: 1.5; transition: fill .15s; }
 .ap:hover .ap-dot { fill: #2e7df0; }
 .ap-pin { stroke: #fff; stroke-width: 1.5; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
 .ap.is-from .ap-pin { fill: #34c759; }  /* Abflug = gruen */
 .ap.is-to .ap-pin { fill: #ff3b30; }    /* Ziel = rot */
 .ap-pin-dot { fill: #fff; }
 .ap-code {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   pointer-events: none;
   fill: #1b2330;
@@ -221,13 +240,6 @@ select {
   stroke-width: 3px;
   stroke-linejoin: round;
 }
-.bm-path-bg {
-  fill: none;
-  stroke: rgba(40, 110, 210, .4);
-  stroke-width: 2;
-  stroke-dasharray: 6 8;
-}
-.bm-path { fill: none; stroke: #2e7df0; stroke-width: 3; }
 
 /* ===== Schritt 2: Sitzklassen ===== */
 .seat-grid, .focus-grid { display: grid; gap: 12px; }
@@ -288,35 +300,11 @@ select {
 .bp-item .bp-k { font-size: 12px; color: var(--muted); }
 .bp-item .bp-v { font-size: 16px; font-weight: 700; margin-top: 2px; }
 
-/* ===== Flug-Screen / Karte ===== */
+/* ===== Flug-Screen / Globus ===== */
 .flight-route-line {
   text-align: center; color: var(--muted); font-weight: 600; margin-bottom: 12px;
 }
-.map-wrap {
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-  aspect-ratio: 2 / 1;
-}
-#map { width: 100%; height: 100%; display: block; }
-
-/* Apple-Karten-Look: helles Wasser, cremefarbenes Land */
-.map-water { fill: #a9d8ef; }
-.map-land { fill: #f3f0e8; stroke: #ddd6c6; stroke-width: .6; }
-
-.map-dot { fill: #34c759; stroke: #fff; stroke-width: 2; }
-.map-dot--to { fill: #ff3b30; }
-.map-label {
-  font-size: 16px;
-  font-weight: 700;
-  fill: #1b2330;
-  paint-order: stroke;       /* weisser Rand um den Text fuer Lesbarkeit */
-  stroke: #fff;
-  stroke-width: 3px;
-  stroke-linejoin: round;
-}
-.plane { font-size: 26px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.3)); }
+.plane { font-size: 28px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
 
 /* ===== Flug-HUD ===== */
 .flight-hud { text-align: center; margin-top: 22px; }

@@ -66,10 +66,14 @@ const selection = {
 // Laufender Flug (Timer-Referenzen)
 let activeFlight = null;
 let tickHandle = null;
-let flightPathLength = 0;
 
 // Welcher Punkt wird beim naechsten Karten-Tipp gesetzt?
 let pickMode = "from"; // "from" oder "to"
+
+// Globus-Instanzen und aktueller Flug-Fortschritt (0..1) fuer das Flugzeug
+let bookingGlobe = null;
+let flightGlobe = null;
+let flightProgress = 0;
 
 // ---------- Datenpersistenz ----------
 
@@ -131,11 +135,11 @@ function formatTime(totalSeconds) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-// Equirektangulare Projektion: lat/lon -> SVG-Koordinaten (viewBox 1000x500)
-function project(airport) {
-  const x = ((airport.lon + 180) / 360) * 1000;
-  const y = ((90 - airport.lat) / 180) * 500;
-  return { x, y };
+// Grosskreis-Mittelpunkt zweier Flughaefen (fuer eine gute Globus-Ansicht)
+function midpointOf(code1, code2) {
+  const a = airportByCode(code1);
+  const b = airportByCode(code2);
+  return greatCirclePoint({ lon: a.lon, lat: a.lat }, { lon: b.lon, lat: b.lat }, 0.5);
 }
 
 // ---------- Navigation zwischen Screens ----------
@@ -180,48 +184,82 @@ function renderRoutePreview() {
     <div><b>${to.code}</b>${to.city}</div>`;
 }
 
-// Setzt die eingebettete Weltkarte (WORLD_PATH) in alle Karten-Flaechen
-function setLandPaths() {
-  document.querySelectorAll(".map-land").forEach((p) => p.setAttribute("d", WORLD_PATH));
-}
-
-// Markierung eines Flughafens: Apple-Pin (gewaehlt) oder kleiner Punkt
-function airportMarker(a) {
-  const p = project(a);
-  const role = a.code === selection.from ? "is-from" : a.code === selection.to ? "is-to" : "";
+// Markierung eines Flughafens auf dem Globus: Apple-Pin (gewaehlt) oder Punkt.
+// screen = {x, y} ist die bereits projizierte Bildschirmposition.
+function airportMarkerSVG(code, screen, role) {
+  const x = screen.x, y = screen.y;
+  const labelX = Math.max(20, Math.min(x + 12, 560));
   if (role) {
     // Tropfenfoermiger Pin mit Spitze direkt auf dem Flughafen
-    const x = p.x, y = p.y;
-    const pin = `M ${x} ${y} L ${x - 6} ${y - 16} A 9 9 0 1 1 ${x + 6} ${y - 16} Z`;
+    const pin = `M ${x.toFixed(1)} ${y.toFixed(1)} L ${(x - 6).toFixed(1)} ${(y - 16).toFixed(1)} A 9 9 0 1 1 ${(x + 6).toFixed(1)} ${(y - 16).toFixed(1)} Z`;
     return `
-      <g class="ap ${role}" data-code="${a.code}">
-        <circle class="ap-hit" cx="${x}" cy="${y - 14}" r="24" />
+      <g class="ap ${role}" data-code="${code}">
+        <circle class="ap-hit" cx="${x.toFixed(1)}" cy="${(y - 14).toFixed(1)}" r="26" />
         <path class="ap-pin" d="${pin}" />
-        <circle class="ap-pin-dot" cx="${x}" cy="${y - 22}" r="3.4" />
-        <text class="ap-code" x="${Math.min(x + 12, 952)}" y="${y - 19}">${a.code}</text>
+        <circle class="ap-pin-dot" cx="${x.toFixed(1)}" cy="${(y - 22).toFixed(1)}" r="3.4" />
+        <text class="ap-code" x="${labelX}" y="${(y - 19).toFixed(1)}">${code}</text>
       </g>`;
   }
   return `
-    <g class="ap" data-code="${a.code}">
-      <circle class="ap-hit" cx="${p.x}" cy="${p.y}" r="20" />
-      <circle class="ap-dot" cx="${p.x}" cy="${p.y}" r="5" />
-      <text class="ap-code" x="${Math.min(p.x + 8, 958)}" y="${p.y - 7}">${a.code}</text>
+    <g class="ap" data-code="${code}">
+      <circle class="ap-hit" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="22" />
+      <circle class="ap-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" />
+      <text class="ap-code" x="${labelX}" y="${(y - 7).toFixed(1)}">${code}</text>
     </g>`;
 }
 
-// Zeichnet die anklickbare Buchungs-Karte (Route + Flughaefen)
-function renderBookingMap() {
-  // Gebogene Route zwischen aktueller Auswahl
-  const p1 = project(airportByCode(selection.from));
-  const p2 = project(airportByCode(selection.to));
-  const cx = (p1.x + p2.x) / 2;
-  const cy = (p1.y + p2.y) / 2 - Math.abs(p2.x - p1.x) * 0.18 - 40;
-  const d = `M ${p1.x} ${p1.y} Q ${cx} ${cy} ${p2.x} ${p2.y}`;
-  $("#booking-path-bg").setAttribute("d", d);
-  $("#booking-path").setAttribute("d", d);
+// Wird vom Buchungs-Globus bei jeder Drehung aufgerufen: Route + Pins zeichnen
+function renderBookingGlobe(g) {
+  const from = airportByCode(selection.from);
+  const to = airportByCode(selection.to);
+  const arc = greatCircleArc({ lon: from.lon, lat: from.lat }, { lon: to.lon, lat: to.lat });
+  $("#booking-route").setAttribute("d", g.buildPath(arc));
 
-  // Alle Flughaefen als anklickbare Marker
-  $("#booking-airports").innerHTML = AIRPORTS.map(airportMarker).join("");
+  // Nur sichtbare (vordere) Flughaefen als anklickbare Marker zeichnen
+  $("#booking-airports").innerHTML = AIRPORTS.map((a) => {
+    const s = g.project(a.lon, a.lat);
+    if (!s.visible) return "";
+    const role = a.code === selection.from ? "is-from" : a.code === selection.to ? "is-to" : "";
+    return airportMarkerSVG(a.code, s, role);
+  }).join("");
+}
+
+// Wird vom Flug-Globus bei jeder Aktualisierung aufgerufen
+function renderFlightGlobe(g) {
+  if (!activeFlight) return;
+  const from = airportByCode(activeFlight.from);
+  const to = airportByCode(activeFlight.to);
+  const A = { lon: from.lon, lat: from.lat };
+  const B = { lon: to.lon, lat: to.lat };
+
+  // Gesamte Route (gestrichelt) und bereits geflogener Teil (durchgezogen)
+  const full = greatCircleArc(A, B, 80);
+  $("#flight-route-bg").setAttribute("d", g.buildPath(full));
+  const k = Math.max(1, Math.floor(flightProgress * 80));
+  const cur = greatCirclePoint(A, B, flightProgress);
+  const traveled = full.slice(0, k + 1).concat([[cur.lon, cur.lat]]);
+  $("#flight-route-done").setAttribute("d", g.buildPath(traveled));
+
+  // Start-/Zielpins
+  $("#flight-markers").innerHTML = [from, to].map((a) => {
+    const s = g.project(a.lon, a.lat);
+    if (!s.visible) return "";
+    const role = a.code === activeFlight.from ? "is-from" : "is-to";
+    return airportMarkerSVG(a.code, s, role);
+  }).join("");
+
+  // Flugzeug an aktueller Position, in Flugrichtung gedreht
+  const sp = g.project(cur.lon, cur.lat);
+  const pg = $("#plane-group");
+  if (sp.visible) {
+    const ahead = greatCirclePoint(A, B, Math.min(1, flightProgress + 0.01));
+    const sa = g.project(ahead.lon, ahead.lat);
+    const ang = (Math.atan2(sa.y - sp.y, sa.x - sp.x) * 180) / Math.PI;
+    pg.setAttribute("transform", `translate(${sp.x.toFixed(1)}, ${sp.y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
+    pg.setAttribute("opacity", "1");
+  } else {
+    pg.setAttribute("opacity", "0");
+  }
 }
 
 // Hinweistext: was wird als naechstes ausgewaehlt?
@@ -232,13 +270,20 @@ function updateMapHint() {
       : "Jetzt das Ziel antippen 🎯";
 }
 
-// Karte, Dropdowns und Vorschau auf einen Stand bringen
+// Globus, Dropdowns und Vorschau auf einen Stand bringen
 function syncRouteUI() {
   $("#select-from").value = selection.from;
   $("#select-to").value = selection.to;
-  renderBookingMap();
+  if (bookingGlobe) bookingGlobe.render();
   renderRoutePreview();
   updateMapHint();
+}
+
+// Globus so drehen, dass Abflug und Ziel gut sichtbar sind
+function recenterBookingGlobe() {
+  if (!bookingGlobe) return;
+  const mid = midpointOf(selection.from, selection.to);
+  bookingGlobe.setCenter(mid.lon, mid.lat);
 }
 
 // Baut die Sitzklassen-Karten
@@ -302,55 +347,11 @@ function renderBoardingPass() {
 
 // ---------- Karte fuer den Flug vorbereiten ----------
 
-// Zeichnet Route, Punkte und positioniert das Flugzeug am Start
-function setupMap() {
-  const from = airportByCode(selection.from);
-  const to = airportByCode(selection.to);
-  const p1 = project(from);
-  const p2 = project(to);
-
-  // Gebogene Flugroute (Kontrollpunkt nach oben versetzt = Bogen)
-  const cx = (p1.x + p2.x) / 2;
-  const cy = (p1.y + p2.y) / 2 - Math.abs(p2.x - p1.x) * 0.18 - 40;
-  const d = `M ${p1.x} ${p1.y} Q ${cx} ${cy} ${p2.x} ${p2.y}`;
-  $("#flight-path").setAttribute("d", d);
-  $("#flight-path-done").setAttribute("d", d);
-
-  // Start-/Zielpunkte und Beschriftung
-  $("#dot-from").setAttribute("cx", p1.x);
-  $("#dot-from").setAttribute("cy", p1.y);
-  $("#dot-to").setAttribute("cx", p2.x);
-  $("#dot-to").setAttribute("cy", p2.y);
-  placeLabel("#label-from", from.code, p1);
-  placeLabel("#label-to", to.code, p2);
-
-  // Gesamtlaenge der Route fuer die Flugzeug-Animation merken
-  flightPathLength = $("#flight-path").getTotalLength();
-  updatePlane(0);
-}
-
-// Setzt ein Beschriftungs-Label leicht versetzt neben einen Punkt
-function placeLabel(sel, text, pt) {
-  const el = $(sel);
-  el.textContent = text;
-  el.setAttribute("x", Math.min(pt.x + 10, 940));
-  el.setAttribute("y", pt.y - 12);
-}
-
-// Bewegt das Flugzeug entlang der Route (progress 0..1) und richtet es aus
-function updatePlane(progress) {
-  const path = $("#flight-path");
-  const len = flightPathLength || path.getTotalLength();
-  const pt = path.getPointAtLength(len * progress);
-  // Tangente fuer die Drehung ueber einen leicht versetzten Punkt bestimmen
-  const ahead = path.getPointAtLength(Math.min(len, len * progress + 1));
-  const angle = (Math.atan2(ahead.y - pt.y, ahead.x - pt.x) * 180) / Math.PI;
-  $("#plane-group").setAttribute(
-    "transform",
-    `translate(${pt.x}, ${pt.y}) rotate(${angle})`
-  );
-  // Bereits geflogenen Teil der Route einfaerben
-  $("#flight-path-done").style.strokeDasharray = `${len * progress} ${len}`;
+// Richtet den Flug-Globus auf die Routenmitte aus und zeichnet ihn
+function setupFlightGlobe() {
+  const mid = midpointOf(activeFlight.from, activeFlight.to);
+  flightGlobe.setCenter(mid.lon, mid.lat);
+  flightGlobe.render();
 }
 
 // ---------- Flug-Ablauf ----------
@@ -373,8 +374,9 @@ function startFlight() {
   store.active = activeFlight;
   saveData(store);
 
+  flightProgress = 0;
   showScreen("flight");
-  setupMap();
+  setupFlightGlobe();
   $("#flight-route-line").textContent =
     `${airportByCode(selection.from).city} → ${airportByCode(selection.to).city}`;
   $("#flight-meta").textContent =
@@ -400,7 +402,8 @@ function tick() {
 
   $("#timer").textContent = formatTime(Math.ceil(remainingMs / 1000));
   $("#progress-fill").style.width = (progress * 100).toFixed(1) + "%";
-  updatePlane(Math.min(1, progress));
+  flightProgress = Math.min(1, progress);
+  flightGlobe.render();
 
   if (remainingMs <= 0) landFlight();
 }
@@ -486,8 +489,13 @@ function resumeIfActive() {
     landFlight();
     return;
   }
+  // Bereits verstrichenen Fortschritt aus der Endzeit ableiten
+  const totalMs = activeFlight.duration * 60 * 1000;
+  const remainingMs = Math.max(0, activeFlight.endsAt - Date.now());
+  flightProgress = Math.min(1, 1 - remainingMs / totalMs);
+
   showScreen("flight");
-  setupMap();
+  setupFlightGlobe();
   $("#flight-route-line").textContent =
     `${airportByCode(activeFlight.from).city} → ${airportByCode(activeFlight.to).city}`;
   $("#flight-meta").textContent =
@@ -575,8 +583,10 @@ function wireEvents() {
     t.addEventListener("click", () => showScreen(t.dataset.screen))
   );
 
-  // Schritt 1: Flughafen auf der Karte antippen (Delegation)
+  // Schritt 1: Flughafen auf dem Globus antippen (Delegation)
   $("#booking-airports").addEventListener("click", (e) => {
+    // Wenn gerade gedreht wurde, ist es kein Tippen -> nicht auswaehlen
+    if (bookingGlobe && bookingGlobe.dragged) return;
     const g = e.target.closest(".ap");
     if (!g) return;
     const code = g.dataset.code;
@@ -598,12 +608,14 @@ function wireEvents() {
     const v = e.target.value;
     if (v === selection.to) selection.to = selection.from;
     selection.from = v;
+    recenterBookingGlobe();
     syncRouteUI();
   });
   $("#select-to").addEventListener("change", (e) => {
     const v = e.target.value;
     if (v === selection.from) selection.from = selection.to;
     selection.to = v;
+    recenterBookingGlobe();
     syncRouteUI();
   });
   $("#swap-btn").addEventListener("click", () => {
@@ -681,10 +693,31 @@ function wireEvents() {
 
 // ---------- Start ----------
 
+// Erzeugt die beiden Globen (Buchung interaktiv, Flug folgt der Route)
+function setupGlobes() {
+  const start = midpointOf(selection.from, selection.to);
+  bookingGlobe = createGlobe({
+    landEl: $("#booking-land"),
+    radius: 285, cx: 300, cy: 300,
+    center: { lon: start.lon, lat: start.lat },
+    target: $("#booking-globe"),
+    interactive: true,
+    onRender: renderBookingGlobe,
+  });
+  flightGlobe = createGlobe({
+    landEl: $("#flight-land"),
+    radius: 285, cx: 300, cy: 300,
+    center: { lon: start.lon, lat: start.lat },
+    target: $("#flight-globe"),
+    interactive: true,
+    onRender: renderFlightGlobe,
+  });
+}
+
 function init() {
-  setLandPaths(); // eingebettete Weltkarte in beide Karten setzen
   fillAirportSelects();
-  syncRouteUI(); // Karte, Dropdowns und Vorschau aufbauen
+  setupGlobes();
+  syncRouteUI(); // Globus, Dropdowns und Vorschau aufbauen
   renderHeader();
   wireEvents();
   resumeIfActive(); // laufenden Flug ggf. fortsetzen
