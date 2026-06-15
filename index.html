@@ -44,14 +44,8 @@
         <p class="map-hint" id="map-hint"></p>
         <div class="map-wrap map-wrap--pick">
           <svg id="booking-map" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <radialGradient id="ocean-b" cx="50%" cy="35%" r="80%">
-                <stop offset="0%" stop-color="#16314f" />
-                <stop offset="100%" stop-color="#0a1828" />
-              </radialGradient>
-            </defs>
-            <rect x="0" y="0" width="1000" height="500" fill="url(#ocean-b)" />
-            <g id="booking-grid"></g>
+            <rect class="map-water" x="0" y="0" width="1000" height="500" />
+            <path id="booking-land" class="map-land" />
             <path id="booking-path-bg" class="bm-path-bg" />
             <path id="booking-path" class="bm-path" />
             <g id="booking-airports"></g>
@@ -133,17 +127,11 @@
       <!-- Karte mit Flugroute und animiertem Flugzeug -->
       <div class="map-wrap">
         <svg id="map" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <radialGradient id="ocean" cx="50%" cy="35%" r="80%">
-              <stop offset="0%" stop-color="#16314f" />
-              <stop offset="100%" stop-color="#0a1828" />
-            </radialGradient>
-          </defs>
-          <rect x="0" y="0" width="1000" height="500" fill="url(#ocean)" />
-          <g id="map-grid"></g>
-          <path id="flight-path" fill="none" stroke="rgba(120,180,255,.35)"
+          <rect class="map-water" x="0" y="0" width="1000" height="500" />
+          <path id="flight-land" class="map-land" />
+          <path id="flight-path" fill="none" stroke="rgba(40,110,210,.45)"
                 stroke-width="2" stroke-dasharray="6 8" />
-          <path id="flight-path-done" fill="none" stroke="#5ea0ff" stroke-width="3" />
+          <path id="flight-path-done" fill="none" stroke="#2e7df0" stroke-width="3" />
           <circle id="dot-from" r="6" class="map-dot" />
           <circle id="dot-to" r="6" class="map-dot map-dot--to" />
           <text id="label-from" class="map-label"></text>
@@ -196,6 +184,7 @@
     </section>
   </main>
 
+  <script src="worldmap.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

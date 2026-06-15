@@ -180,14 +180,37 @@ function renderRoutePreview() {
     <div><b>${to.code}</b>${to.city}</div>`;
 }
 
-// Zeichnet die anklickbare Buchungs-Karte (Gitter, Route, Flughaefen)
-function renderBookingMap() {
-  // Dekoratives Gitternetz
-  let grid = "";
-  for (let x = 0; x <= 1000; x += 100) grid += `<line x1="${x}" y1="0" x2="${x}" y2="500" />`;
-  for (let y = 0; y <= 500; y += 100) grid += `<line x1="0" y1="${y}" x2="1000" y2="${y}" />`;
-  $("#booking-grid").innerHTML = grid;
+// Setzt die eingebettete Weltkarte (WORLD_PATH) in alle Karten-Flaechen
+function setLandPaths() {
+  document.querySelectorAll(".map-land").forEach((p) => p.setAttribute("d", WORLD_PATH));
+}
 
+// Markierung eines Flughafens: Apple-Pin (gewaehlt) oder kleiner Punkt
+function airportMarker(a) {
+  const p = project(a);
+  const role = a.code === selection.from ? "is-from" : a.code === selection.to ? "is-to" : "";
+  if (role) {
+    // Tropfenfoermiger Pin mit Spitze direkt auf dem Flughafen
+    const x = p.x, y = p.y;
+    const pin = `M ${x} ${y} L ${x - 6} ${y - 16} A 9 9 0 1 1 ${x + 6} ${y - 16} Z`;
+    return `
+      <g class="ap ${role}" data-code="${a.code}">
+        <circle class="ap-hit" cx="${x}" cy="${y - 14}" r="24" />
+        <path class="ap-pin" d="${pin}" />
+        <circle class="ap-pin-dot" cx="${x}" cy="${y - 22}" r="3.4" />
+        <text class="ap-code" x="${Math.min(x + 12, 952)}" y="${y - 19}">${a.code}</text>
+      </g>`;
+  }
+  return `
+    <g class="ap" data-code="${a.code}">
+      <circle class="ap-hit" cx="${p.x}" cy="${p.y}" r="20" />
+      <circle class="ap-dot" cx="${p.x}" cy="${p.y}" r="5" />
+      <text class="ap-code" x="${Math.min(p.x + 8, 958)}" y="${p.y - 7}">${a.code}</text>
+    </g>`;
+}
+
+// Zeichnet die anklickbare Buchungs-Karte (Route + Flughaefen)
+function renderBookingMap() {
   // Gebogene Route zwischen aktueller Auswahl
   const p1 = project(airportByCode(selection.from));
   const p2 = project(airportByCode(selection.to));
@@ -197,19 +220,8 @@ function renderBookingMap() {
   $("#booking-path-bg").setAttribute("d", d);
   $("#booking-path").setAttribute("d", d);
 
-  // Alle Flughaefen als anklickbare Gruppen (grosse Trefferflaeche fuer Touch)
-  $("#booking-airports").innerHTML = AIRPORTS.map((a) => {
-    const p = project(a);
-    const role = a.code === selection.from ? "is-from" : a.code === selection.to ? "is-to" : "";
-    const r = role ? 8 : 5;
-    const labelX = Math.min(p.x + 9, 955);
-    return `
-      <g class="ap ${role}" data-code="${a.code}">
-        <circle class="ap-hit" cx="${p.x}" cy="${p.y}" r="22" />
-        <circle class="ap-dot" cx="${p.x}" cy="${p.y}" r="${r}" />
-        <text class="ap-code" x="${labelX}" y="${p.y - 9}">${a.code}</text>
-      </g>`;
-  }).join("");
+  // Alle Flughaefen als anklickbare Marker
+  $("#booking-airports").innerHTML = AIRPORTS.map(airportMarker).join("");
 }
 
 // Hinweistext: was wird als naechstes ausgewaehlt?
@@ -290,18 +302,12 @@ function renderBoardingPass() {
 
 // ---------- Karte fuer den Flug vorbereiten ----------
 
-// Zeichnet Gitternetz, Route, Punkte und positioniert das Flugzeug am Start
+// Zeichnet Route, Punkte und positioniert das Flugzeug am Start
 function setupMap() {
   const from = airportByCode(selection.from);
   const to = airportByCode(selection.to);
   const p1 = project(from);
   const p2 = project(to);
-
-  // Laengen-/Breitengitter (rein dekorativ)
-  let grid = "";
-  for (let x = 0; x <= 1000; x += 100) grid += `<line x1="${x}" y1="0" x2="${x}" y2="500" />`;
-  for (let y = 0; y <= 500; y += 100) grid += `<line x1="0" y1="${y}" x2="1000" y2="${y}" />`;
-  $("#map-grid").innerHTML = grid;
 
   // Gebogene Flugroute (Kontrollpunkt nach oben versetzt = Bogen)
   const cx = (p1.x + p2.x) / 2;
@@ -676,6 +682,7 @@ function wireEvents() {
 // ---------- Start ----------
 
 function init() {
+  setLandPaths(); // eingebettete Weltkarte in beide Karten setzen
   fillAirportSelects();
   syncRouteUI(); // Karte, Dropdowns und Vorschau aufbauen
   renderHeader();
