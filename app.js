@@ -60,15 +60,58 @@ function formatTime(sec) {
 }
 
 // ---------- Persistenz ----------
+// Fehlende Felder ergaenzen, damit aeltere/importierte Daten kompatibel sind
+function normalize(data) {
+  const d = data || {};
+  d.flights = Array.isArray(d.flights) ? d.flights : [];
+  d.totalMiles = d.totalMiles || 0;
+  d.active = d.active || null;
+  d.settings = Object.assign({ sound: true, dailyGoalMin: 60 }, d.settings || {});
+  d.streak = Object.assign({ count: 0, lastDay: null }, d.streak || {});
+  return d;
+}
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return normalize(JSON.parse(raw));
   } catch (e) { console.warn("Laden fehlgeschlagen:", e); }
-  return { flights: [], totalMiles: 0, active: null };
+  return normalize(null);
 }
 const saveData = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
 let store = loadData();
+
+// ---------- Sounds (Web Audio, ohne Dateien) ----------
+let audioCtx = null;
+function ensureAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch (e) {}
+}
+function beep(freq, start, dur, gain = 0.18) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = "sine"; o.frequency.value = freq;
+  o.connect(g); g.connect(audioCtx.destination);
+  const t = audioCtx.currentTime + start;
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.start(t); o.stop(t + dur);
+}
+function playTakeoff() { if (!store.settings.sound) return; ensureAudio(); beep(330, 0, .3); beep(440, .18, .3); beep(660, .36, .5); }
+function playLanding() { if (!store.settings.sound) return; ensureAudio(); beep(660, 0, .3); beep(440, .18, .3); beep(330, .36, .6); }
+
+// ---------- Streak (Tage in Folge) ----------
+const todayStr = () => new Date().toISOString().slice(0, 10);
+function updateStreak() {
+  const t = todayStr();
+  if (store.streak.lastDay === t) return; // heute schon geflogen
+  const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  store.streak.count = store.streak.lastDay === yest ? store.streak.count + 1 : 1;
+  store.streak.lastDay = t;
+}
+const minutesToday = () =>
+  store.flights.filter((f) => f.date.slice(0, 10) === todayStr()).reduce((s, f) => s + f.duration, 0);
 
 // ---------- Screen-/Panel-Navigation ----------
 function showScreen(name) {
@@ -181,6 +224,7 @@ function pickAirport(code) {
 // ---------- Flug-Ablauf ----------
 function startFlight() {
   if (selection.from === selection.to) { alert("Abflug und Ziel duerfen nicht gleich sein."); return; }
+  ensureAudio(); playTakeoff(); // Klick = erlaubte Audio-Geste
   const now = Date.now();
   activeFlight = {
     from: selection.from, to: selection.to, seat: selection.seat,
@@ -259,17 +303,27 @@ function landFlight() {
     from: f.from, to: f.to, seat: f.seat, focus: f.focus, duration: f.duration, miles,
   });
   store.totalMiles += miles;
+  updateStreak();
   store.active = null; activeFlight = null; saveData();
   renderHeader();
+  playLanding();
   if (mapReady) GlobeMap.hidePlane();
   const newRank = rankFor(store.totalMiles);
   $("#summary-sub").textContent =
     `${airportByCode(f.from).city} → ${airportByCode(f.to).city} · ${f.duration} min ${focusById(f.focus).title}`;
   $("#summary-miles").textContent = `+ ${miles} Meilen ★`;
   $("#summary-rankup").textContent = newRank.name !== oldRank.name ? `🎉 Neuer Rang: ${newRank.name}!` : "";
+  $("#flight-note").value = ""; // Notizfeld fuer den neuen Flug leeren
   showPanel("summary");
 }
+
+// Notiz des zuletzt gelandeten Flugs speichern
+function saveFlightNote() {
+  const note = $("#flight-note").value.trim();
+  if (note && store.flights[0]) { store.flights[0].note = note; saveData(); }
+}
 function backToBooking() {
+  saveFlightNote();
   pickMode = "from";
   if (mapReady) GlobeMap.hidePlane();
   showScreen("map");
@@ -302,10 +356,29 @@ function renderTickets() {
   $("#tickets-sub").textContent = `${store.flights.length} abgeschlossene Fluege`;
   list.innerHTML = store.flights.map((f) => {
     const d = new Date(f.date).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" });
+    const note = f.note ? `<div class="t-note">„${f.note}"</div>` : "";
     return `<div class="ticket">
       <div><div class="t-route">${f.from} → ${f.to}</div>
-        <div class="t-meta">${d} · ${seatById(f.seat).title} · ${focusById(f.focus).icon} ${f.duration} min</div></div>
+        <div class="t-meta">${d} · ${seatById(f.seat).title} · ${focusById(f.focus).icon} ${f.duration} min</div>${note}</div>
       <div class="t-miles">★ ${f.miles}</div></div>`;
+  }).join("");
+}
+function renderDailyGoal() {
+  const goal = store.settings.dailyGoalMin;
+  const done = minutesToday();
+  const pct = Math.min(100, goal ? (done / goal) * 100 : 0);
+  $("#goal-label").textContent = `${done} / ${goal} min heute` +
+    (store.streak.count ? ` · 🔥 ${store.streak.count} Tage` : "");
+  $("#goal-fill").style.width = pct.toFixed(0) + "%";
+  $("#goal-input").value = goal;
+  $("#sound-toggle").checked = !!store.settings.sound;
+}
+function renderAchievements() {
+  $("#ach-grid").innerHTML = ACHIEVEMENTS.map((a) => {
+    const got = a.test(store);
+    return `<div class="ach ${got ? "got" : ""}" title="${a.desc}">
+      <div class="ach-icon">${a.icon}</div><div class="ach-title">${a.title}</div>
+      <div class="ach-desc">${a.desc}</div></div>`;
   }).join("");
 }
 function renderStats() {
@@ -322,6 +395,30 @@ function renderStats() {
   $("#route-stats").innerHTML = rows.length
     ? rows.map(([r, n]) => `<div class="route-stat-row"><span>${r}</span><span>${n}×</span></div>`).join("")
     : `<div class="empty-state">Noch keine Routen geflogen.</div>`;
+  renderDailyGoal();
+  renderAchievements();
+}
+
+// ---------- Export / Import ----------
+function exportData() {
+  const blob = new Blob([JSON.stringify(store, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "focusflight-backup.json"; a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data || !Array.isArray(data.flights)) throw new Error("ungueltig");
+      store = normalize(data); saveData();
+      renderHeader(); renderStats(); renderTickets();
+      alert("Daten importiert ✅");
+    } catch (e) { alert("Import fehlgeschlagen — keine gueltige Backup-Datei."); }
+  };
+  reader.readAsText(file);
 }
 function renderHeader() {
   $("#miles-total").textContent = store.totalMiles;
@@ -384,9 +481,21 @@ function wireEvents() {
 
   $("#reset-btn").addEventListener("click", () => {
     if (!confirm("Wirklich alle Fluege, Meilen und Tickets loeschen?")) return;
-    store = { flights: [], totalMiles: 0, active: null }; saveData();
+    store = normalize(null); saveData();
     renderHeader(); renderStats(); renderTickets();
   });
+
+  // Einstellungen
+  $("#sound-toggle").addEventListener("change", (e) => { store.settings.sound = e.target.checked; saveData(); });
+  $("#goal-input").addEventListener("change", (e) => {
+    store.settings.dailyGoalMin = Math.max(15, Number(e.target.value) || 60);
+    saveData(); renderDailyGoal();
+  });
+  $("#export-btn").addEventListener("click", exportData);
+  $("#import-file").addEventListener("change", (e) => { if (e.target.files[0]) importData(e.target.files[0]); });
+
+  // Notiz speichern, sobald man das Feld verlaesst
+  $("#flight-note").addEventListener("blur", saveFlightNote);
 }
 
 // ---------- Start ----------

@@ -181,6 +181,28 @@ select { background: var(--card); color: var(--text); border: 1px solid var(--li
 .route-stat-row { display: flex; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; }
 .route-stat-row span:last-child { color: var(--muted); }
 
+/* ===== Notiz / Tagesziel / Erfolge / Einstellungen ===== */
+.note-input {
+  width: 100%; margin-top: 14px; padding: 12px; border-radius: 12px;
+  background: var(--card); border: 1px solid var(--line); color: var(--text); font-size: 15px;
+}
+.goal-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.goal-row { display: flex; justify-content: space-between; margin-bottom: 10px; color: var(--text); font-weight: 600; }
+
+.ach-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.ach { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; text-align: center; opacity: .45; }
+.ach.got { opacity: 1; border-color: var(--gold); }
+.ach-icon { font-size: 26px; }
+.ach-title { font-weight: 700; margin: 6px 0 2px; }
+.ach-desc { font-size: 12px; color: var(--muted); }
+
+.setting-row { display: flex; justify-content: space-between; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; }
+.setting-row input[type="number"] { width: 90px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.setting-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
+.setting-actions { display: flex; gap: 10px; margin-bottom: 10px; }
+.setting-actions .ghost-btn { flex: 1; text-align: center; }
+.t-note { color: var(--muted); font-size: 13px; margin-top: 4px; font-style: italic; }
+
 /* ===== Navigation ===== */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 8;
