@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>FocusFlight — Dein Fokus hebt ab</title>
+
+  <!-- MapLibre GL JS v5 (gratis, ohne API-Key) -->
+  <link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Karte als Hintergrund (immer sichtbar) -->
+  <div id="map"></div>
+
+  <!-- Kopfzeile -->
+  <header class="topbar">
+    <div class="brand"><span class="brand-logo">✈</span><span class="brand-name">FocusFlight</span></div>
+    <div class="header-right">
+      <div class="miles-badge"><span class="miles-icon">★</span><span id="miles-total">0</span></div>
+      <div class="rank-badge" id="rank-badge">Economy Flyer</div>
+    </div>
+  </header>
+
+  <!-- Bottom-Sheet: Buchung / Flug / Ankunft -->
+  <div id="panel" class="panel">
+
+    <!-- ===== Buchung ===== -->
+    <div id="panel-booking" class="panel-view is-active">
+      <!-- Schritt 1: Route -->
+      <div class="step is-active" data-step="route">
+        <p class="map-hint" id="map-hint"></p>
+        <div class="route-summary" id="route-summary"></div>
+
+        <div class="duration-slider">
+          <div class="ds-row"><span class="field-label">Fokus-Dauer</span><span class="ds-value" id="duration-value">45 min</span></div>
+          <input type="range" id="duration-range" min="15" max="300" step="15" value="45" />
+          <p class="ds-reach" id="reach-info"></p>
+        </div>
+
+        <div class="route-pickers">
+          <label class="field"><span class="field-label">Abflug</span><select id="select-from"></select></label>
+          <button id="swap-btn" class="swap-btn" title="Tauschen">⇅</button>
+          <label class="field"><span class="field-label">Ziel</span><select id="select-to"></select></label>
+        </div>
+
+        <button class="primary-btn" id="to-seat-btn">Weiter zur Sitzwahl</button>
+      </div>
+
+      <!-- Schritt 2: Sitz -->
+      <div class="step" data-step="seat">
+        <h2 class="step-title">Sitz buchen</h2>
+        <div class="seat-grid" id="seat-grid"></div>
+        <div class="step-nav">
+          <button class="ghost-btn" data-goto="route">Zurueck</button>
+          <button class="primary-btn" id="to-focus-btn">Weiter</button>
+        </div>
+      </div>
+
+      <!-- Schritt 3: Fokus-Art -->
+      <div class="step" data-step="focus">
+        <h2 class="step-title">Fokus-Art</h2>
+        <div class="focus-grid" id="focus-grid"></div>
+        <div class="step-nav">
+          <button class="ghost-btn" data-goto="seat">Zurueck</button>
+          <button class="primary-btn" id="to-confirm-btn">Boarding-Pass</button>
+        </div>
+      </div>
+
+      <!-- Schritt 4: Boarding-Pass -->
+      <div class="step" data-step="confirm">
+        <h2 class="step-title">Boarding-Pass</h2>
+        <div class="boarding-pass" id="boarding-pass"></div>
+        <div class="step-nav">
+          <button class="ghost-btn" data-goto="focus">Zurueck</button>
+          <button class="primary-btn" id="depart-btn">Jetzt abheben ✈</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Flug ===== -->
+    <div id="panel-flight" class="panel-view">
+      <div class="flight-route-line" id="flight-route-line"></div>
+      <div class="timer" id="timer">00:00</div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="flight-meta" id="flight-meta"></div>
+      <div class="flight-controls">
+        <button class="ghost-btn" id="pause-btn">Pause</button>
+        <button class="danger-btn" id="abort-btn">Notlandung</button>
+      </div>
+    </div>
+
+    <!-- ===== Ankunft ===== -->
+    <div id="panel-summary" class="panel-view">
+      <div class="summary-emoji">🛬</div>
+      <h2>Gelandet!</h2>
+      <p id="summary-sub" class="summary-sub"></p>
+      <div class="summary-miles" id="summary-miles"></div>
+      <p id="summary-rankup" class="summary-rankup"></p>
+      <button class="primary-btn" id="summary-done-btn">Neuen Flug buchen</button>
+    </div>
+  </div>
+
+  <!-- Tickets (Overlay) -->
+  <section id="screen-tickets" class="overlay">
+    <h2 class="screen-title">Deine Tickets</h2>
+    <p class="screen-sub" id="tickets-sub"></p>
+    <div class="ticket-list" id="ticket-list"></div>
+  </section>
+
+  <!-- Statistik (Overlay) -->
+  <section id="screen-stats" class="overlay">
+    <h2 class="screen-title">Statistik</h2>
+    <div class="stats-grid" id="stats-grid"></div>
+    <h3 class="screen-subtitle">Geflogene Routen</h3>
+    <div class="route-stats" id="route-stats"></div>
+    <button class="danger-btn danger-btn--block" id="reset-btn">Alle Daten zuruecksetzen</button>
+  </section>
+
+  <!-- Navigation -->
+  <nav class="tabbar">
+    <button class="tab is-active" data-screen="map">Buchen</button>
+    <button class="tab" data-screen="tickets">Tickets</button>
+    <button class="tab" data-screen="stats">Statistik</button>
+  </nav>
+
+  <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+  <script src="geo.js"></script>
+  <script src="data.js"></script>
+  <script src="map.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

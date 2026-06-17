@@ -1,0 +1,196 @@
+/* ===== Grundlagen & Farben ===== */
+:root {
+  --bg: #0b1220;
+  --card: #16233c;
+  --card-hi: #1d2f4f;
+  --line: #25395c;
+  --text: #eaf1fb;
+  --muted: #93a6c4;
+  --accent: #5ea0ff;
+  --accent-2: #8b7bff;
+  --gold: #ffcc4d;
+  --danger: #ff6b6b;
+  --ok: #4cd585;
+  --radius: 16px;
+  --tabbar-h: 56px;
+  --shadow: 0 -10px 30px rgba(0, 0, 0, .45);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ===== Karte als Hintergrund ===== */
+#map { position: fixed; inset: 0; }
+.maplibregl-ctrl-top-right { margin-top: 64px; }
+
+/* ===== Kopfzeile ===== */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  background: linear-gradient(180deg, rgba(11, 18, 32, .92), rgba(11, 18, 32, 0));
+  pointer-events: none;
+}
+.topbar > * { pointer-events: auto; }
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand-logo { font-size: 20px; transform: rotate(-30deg); filter: drop-shadow(0 0 8px rgba(94,160,255,.6)); }
+.brand-name { font-size: 18px; font-weight: 700; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.miles-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(22, 35, 60, .9); border: 1px solid var(--line);
+  padding: 6px 11px; border-radius: 999px; font-weight: 700;
+}
+.miles-icon { color: var(--gold); }
+.rank-badge {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
+}
+
+/* ===== Bottom-Sheet (Buchung/Flug/Ankunft) ===== */
+.panel {
+  position: fixed; left: 0; right: 0; z-index: 6;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  max-height: 56vh; overflow-y: auto;
+  background: rgba(13, 20, 34, .96);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--shadow);
+  padding: 16px 18px 20px;
+}
+.panel-view { display: none; }
+.panel-view.is-active { display: block; }
+.step { display: none; }
+.step.is-active { display: block; }
+.step-title { font-size: 18px; margin: 0 0 12px; }
+
+/* ===== Buttons ===== */
+.primary-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border: none; padding: 14px 20px; border-radius: 12px;
+  font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 14px;
+}
+.primary-btn:active { transform: scale(.98); }
+.ghost-btn { background: transparent; color: var(--text); border: 1px solid var(--line); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+.danger-btn { background: transparent; color: var(--danger); border: 1px solid rgba(255,107,107,.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+.danger-btn--block { width: 100%; margin-top: 30px; }
+.step-nav { display: flex; gap: 10px; margin-top: 16px; }
+.step-nav .primary-btn { margin-top: 0; }
+
+/* ===== Schritt 1 ===== */
+.map-hint { color: var(--accent); font-weight: 600; margin: 0 0 8px; font-size: 14px; }
+.route-summary { font-size: 15px; color: var(--muted); margin-bottom: 12px; }
+.route-summary b { color: var(--text); }
+.rs-dist { color: var(--muted); }
+
+.duration-slider { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.ds-row { display: flex; justify-content: space-between; align-items: baseline; }
+.field-label { font-size: 13px; color: var(--muted); font-weight: 600; }
+.ds-value { font-size: 19px; font-weight: 800; color: var(--accent); }
+.ds-reach { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+.ds-reach b { color: var(--text); }
+.reach-warn { color: var(--gold); font-weight: 600; }
+input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 7px;
+  margin: 12px 0 2px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2)); cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.4);
+}
+input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); }
+
+.route-pickers { display: flex; align-items: flex-end; gap: 10px; margin-top: 12px; }
+.field { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+select { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-size: 15px; }
+.swap-btn { background: var(--card); border: 1px solid var(--line); color: var(--accent); width: 46px; height: 46px; border-radius: 12px; font-size: 20px; cursor: pointer; flex-shrink: 0; }
+
+/* ===== Sitz / Fokus ===== */
+.seat-grid, .focus-grid { display: grid; gap: 10px; }
+.seat-grid { grid-template-columns: repeat(3, 1fr); }
+.focus-grid { grid-template-columns: repeat(2, 1fr); }
+.pick-card { background: var(--card); border: 2px solid var(--line); border-radius: var(--radius); padding: 14px; cursor: pointer; text-align: center; }
+.pick-card.is-selected { border-color: var(--accent); background: var(--card-hi); }
+.pc-icon { font-size: 24px; }
+.pc-title { font-weight: 700; margin: 6px 0 2px; }
+.pc-sub { font-size: 12px; color: var(--muted); }
+.pc-badge { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--gold); }
+
+/* ===== Boarding-Pass ===== */
+.boarding-pass { background: linear-gradient(135deg, var(--card-hi), var(--card)); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+.bp-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--line); padding-bottom: 12px; margin-bottom: 12px; }
+.bp-code { font-size: 26px; font-weight: 800; }
+.bp-city { font-size: 12px; color: var(--muted); }
+.bp-plane { color: var(--accent); }
+.bp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.bp-grid > div { display: flex; flex-direction: column; }
+.bp-k { font-size: 11px; color: var(--muted); }
+.bp-v { font-size: 15px; font-weight: 700; }
+
+/* ===== Flug-HUD ===== */
+.flight-route-line { text-align: center; color: var(--muted); font-weight: 600; }
+.timer { text-align: center; font-size: 52px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.progress-track { height: 8px; background: var(--card); border-radius: 999px; overflow: hidden; margin: 12px auto; max-width: 460px; }
+.progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .4s linear; }
+.flight-meta { text-align: center; color: var(--muted); }
+.flight-controls { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+
+/* ===== Ankunft ===== */
+#panel-summary { text-align: center; }
+.summary-emoji { font-size: 48px; }
+#panel-summary h2 { margin: 6px 0; }
+.summary-sub { color: var(--muted); margin: 0 0 12px; }
+.summary-miles { font-size: 22px; font-weight: 800; color: var(--gold); }
+.summary-rankup { color: var(--ok); font-weight: 700; min-height: 20px; }
+
+/* ===== Overlays (Tickets/Statistik) ===== */
+.overlay {
+  position: fixed; inset: 0; z-index: 7; display: none;
+  background: var(--bg);
+  padding: calc(env(safe-area-inset-top) + 60px) 18px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 20px);
+  overflow-y: auto;
+}
+.overlay.is-active { display: block; }
+.screen-title { font-size: 22px; margin: 0 0 6px; }
+.screen-subtitle { font-size: 16px; margin: 24px 0 10px; color: var(--muted); }
+.screen-sub { color: var(--muted); margin: 0 0 16px; }
+.ticket-list { display: grid; gap: 10px; }
+.ticket { display: flex; justify-content: space-between; align-items: center; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 16px; }
+.t-route { font-weight: 700; }
+.t-meta { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.t-miles { color: var(--gold); font-weight: 700; }
+.empty-state { text-align: center; color: var(--muted); padding: 40px 20px; background: var(--card); border: 1px dashed var(--line); border-radius: var(--radius); }
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.stat-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.s-val { font-size: 26px; font-weight: 800; }
+.s-label { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.route-stats { display: grid; gap: 8px; }
+.route-stat-row { display: flex; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; }
+.route-stat-row span:last-child { color: var(--muted); }
+
+/* ===== Navigation ===== */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8;
+  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  display: flex; background: rgba(11, 18, 32, .96);
+  backdrop-filter: blur(12px); border-top: 1px solid var(--line);
+}
+.tab { flex: 1; background: transparent; border: none; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; }
+.tab.is-active { color: var(--text); box-shadow: inset 0 2px 0 var(--accent); }
+
+/* ===== Karten-Marker (Pins + Flugzeug) ===== */
+.pin { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: opacity .15s; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; background: #5a6b86; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.pin-label { font-size: 11px; font-weight: 800; color: #1b2330; background: rgba(255,255,255,.85); border-radius: 6px; padding: 0 4px; margin-top: 2px; white-space: nowrap; }
+.pin.is-from .pin-dot { background: #34c759; width: 18px; height: 18px; }
+.pin.is-to .pin-dot { background: #ff3b30; width: 18px; height: 18px; }
+.pin.out { opacity: .3; }
+.pin.out .pin-label { display: none; }
+.plane-marker { font-size: 26px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
