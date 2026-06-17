@@ -6,6 +6,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b1220" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <title>FocusFlight — Dein Fokus hebt ab</title>
 
   <!-- MapLibre GL JS v5 (gratis, ohne API-Key) -->
@@ -15,6 +17,7 @@
 <body>
   <!-- Karte als Hintergrund (immer sichtbar) -->
   <div id="map"></div>
+  <div id="map-offline" class="map-offline">🛰️ Karte braucht Internet — Buchung &amp; Timer funktionieren trotzdem.</div>
 
   <!-- Kopfzeile -->
   <header class="topbar">

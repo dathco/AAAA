@@ -34,7 +34,7 @@ const GlobeMap = (() => {
   }
 
   // Karte initialisieren; onReady wird gerufen, sobald Stil + Ebenen stehen
-  function init(onReady) {
+  function init(onReady, onError) {
     map = new maplibregl.Map({
       container: "map",
       style: "https://tiles.openfreemap.org/styles/positron",
@@ -44,6 +44,8 @@ const GlobeMap = (() => {
       dragRotate: true,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
+
+    if (onError) map.on("error", onError);
 
     map.on("style.load", () => {
       map.setProjection({ type: "globe" }); // 3D-Globus aktivieren

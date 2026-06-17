@@ -10,6 +10,25 @@ let activeFlight = null;       // laufender Flug
 let tickHandle = null;
 let flightProgress = 0;        // 0..1
 let mapReady = false;
+let wakeLock = null;           // haelt den Bildschirm waehrend des Flugs an
+
+// ---------- Bildschirm wach halten (Wake Lock) ----------
+async function requestWakeLock() {
+  try { if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); }
+  catch (e) { /* z.B. nicht erlaubt — kein Problem */ }
+}
+function releaseWakeLock() {
+  try { if (wakeLock) wakeLock.release(); } catch (e) {}
+  wakeLock = null;
+}
+// Nach App-Wechsel zurueck: Lock erneut anfordern, wenn ein Flug laeuft
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && activeFlight && !activeFlight.paused) requestWakeLock();
+});
+
+// ---------- Karten-Offline-Hinweis ----------
+const showMapOffline = () => $("#map-offline").classList.add("show");
+const hideMapOffline = () => $("#map-offline").classList.remove("show");
 
 // ---------- Hilfsfunktionen ----------
 const $ = (sel) => document.querySelector(sel);
@@ -182,6 +201,7 @@ function enterFlightView() {
     `${seatById(activeFlight.seat).title} · ${focusById(activeFlight.focus).icon} ${focusById(activeFlight.focus).title}`;
   $("#pause-btn").textContent = activeFlight.paused ? "Weiter" : "Pause";
   if (mapReady) { GlobeMap.setReach([]); GlobeMap.flyTo(f.lon, f.lat, 3.2); }
+  if (!activeFlight.paused) requestWakeLock();
 }
 function startTicking() { clearInterval(tickHandle); tick(); tickHandle = setInterval(tick, 1000); }
 
@@ -213,20 +233,24 @@ function togglePause() {
     activeFlight.endsAt += Date.now() - activeFlight.pausedAt;
     activeFlight.paused = false; activeFlight.pausedAt = null;
     $("#pause-btn").textContent = "Pause";
+    requestWakeLock();
   } else {
     activeFlight.paused = true; activeFlight.pausedAt = Date.now();
     $("#pause-btn").textContent = "Weiter";
+    releaseWakeLock();
   }
   store.active = activeFlight; saveData();
 }
 function abortFlight() {
   if (!confirm("Notlandung einleiten? Dieser Flug bringt keine Meilen.")) return;
   clearInterval(tickHandle);
+  releaseWakeLock();
   activeFlight = null; store.active = null; saveData();
   backToBooking();
 }
 function landFlight() {
   clearInterval(tickHandle);
+  releaseWakeLock();
   const f = activeFlight;
   const miles = milesFor(f.duration, f.seat);
   const oldRank = rankFor(store.totalMiles);
@@ -375,9 +399,23 @@ function init() {
   showScreen("map");
   showPanel("booking");
   syncRoute(); // baut die textuellen Teile schon ohne Karte
+  startMap();
 
-  // Karte initialisieren; Overlays erst, wenn der Stil geladen ist
+  // Service Worker registrieren (macht die App installierbar) — nur ueber https
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+}
+
+// Karte starten; bei fehlendem Netz/CDN freundlich degradieren
+function startMap() {
+  if (typeof maplibregl === "undefined") { showMapOffline(); return; }
+  let ready = false;
+  const timeout = setTimeout(() => { if (!ready) showMapOffline(); }, 9000);
   GlobeMap.init(() => {
+    ready = true;
+    clearTimeout(timeout);
+    hideMapOffline();
     mapReady = true;
     GlobeMap.addAirports(AIRPORTS, pickAirport);
     updateBookingOverlays();
