@@ -50,6 +50,7 @@
           <label class="field"><span class="field-label">Ziel</span><select id="select-to"></select></label>
         </div>
 
+        <button class="ghost-btn ghost-btn--block" id="random-btn">🎲 Zufallsziel in Reichweite</button>
         <button class="primary-btn" id="to-seat-btn">Weiter zur Sitzwahl</button>
       </div>
 
@@ -133,7 +134,9 @@
     <div class="route-stats" id="route-stats"></div>
 
     <h3 class="screen-subtitle">Einstellungen</h3>
+    <div class="setting-row"><span>Kartenstil</span><div class="style-buttons" id="style-buttons"></div></div>
     <label class="setting-row"><span>Sounds</span><input type="checkbox" id="sound-toggle" /></label>
+    <label class="setting-row"><span>Nur erreichbare Ziele</span><input type="checkbox" id="lock-toggle" /></label>
     <label class="setting-row"><span>Tagesziel (Minuten)</span><input type="number" id="goal-input" min="15" max="600" step="15" /></label>
     <div class="setting-actions">
       <button class="ghost-btn" id="export-btn">Daten exportieren</button>

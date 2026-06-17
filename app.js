@@ -66,7 +66,7 @@ function normalize(data) {
   d.flights = Array.isArray(d.flights) ? d.flights : [];
   d.totalMiles = d.totalMiles || 0;
   d.active = d.active || null;
-  d.settings = Object.assign({ sound: true, dailyGoalMin: 60 }, d.settings || {});
+  d.settings = Object.assign({ sound: true, dailyGoalMin: 60, mapStyle: "positron", lockReach: false }, d.settings || {});
   d.streak = Object.assign({ count: 0, lastDay: null }, d.streak || {});
   return d;
 }
@@ -206,6 +206,14 @@ function recenterToOrigin() {
   if (mapReady) GlobeMap.flyTo(...coordOf(selection.from), 2.4);
 }
 
+// Ziel gesperrt, weil ausserhalb der Reichweite (nur wenn Option aktiv)?
+function blockedAsTarget(code) {
+  if (!store.settings.lockReach) return false;
+  if (code === selection.from || isReachable(code)) return false;
+  alert("Ausserhalb der Reichweite — erhoehe die Fokus-Dauer oder waehle ein naeheres Ziel.");
+  return true;
+}
+
 // Auswahl per Karten-Pin
 function pickAirport(code) {
   if (pickMode === "from") {
@@ -214,10 +222,19 @@ function pickAirport(code) {
     pickMode = "to";
     recenterToOrigin();
   } else {
+    if (blockedAsTarget(code)) return;
     if (code === selection.from) selection.from = selection.to;
     selection.to = code;
     pickMode = "from";
   }
+  syncRoute();
+}
+
+// Zufaelliges, erreichbares Ziel waehlen (wie "random airport")
+function randomDestination() {
+  const candidates = AIRPORTS.filter((a) => a.code !== selection.from && isReachable(a.code));
+  const pool = candidates.length ? candidates : AIRPORTS.filter((a) => a.code !== selection.from);
+  selection.to = pool[Math.floor(Math.random() * pool.length)].code;
   syncRoute();
 }
 
@@ -257,19 +274,29 @@ function tick() {
 
   $("#timer").textContent = formatTime(Math.ceil(remaining / 1000));
   $("#progress-fill").style.width = (flightProgress * 100).toFixed(1) + "%";
-
-  if (mapReady) {
-    const A = coordOf(activeFlight.from), B = coordOf(activeFlight.to);
-    const full = greatCircleArc(A, B, 80);
-    const k = Math.max(1, Math.floor(flightProgress * 80));
-    const cur = greatCirclePoint(A, B, flightProgress);
-    GlobeMap.setRouteBg(full);
-    GlobeMap.setRoute(full.slice(0, k + 1).concat([cur]));
-    const ahead = greatCirclePoint(A, B, Math.min(1, flightProgress + 0.01));
-    GlobeMap.showPlane(cur[0], cur[1], bearingDeg(cur, ahead));
-    GlobeMap.flyTo(cur[0], cur[1]);
-  }
+  drawFlightOverlays();
   if (remaining <= 0) landFlight();
+}
+
+// Route + Flugzeug zum aktuellen Fortschritt zeichnen (auch nach Stilwechsel)
+function drawFlightOverlays() {
+  if (!mapReady || !activeFlight) return;
+  const A = coordOf(activeFlight.from), B = coordOf(activeFlight.to);
+  const full = greatCircleArc(A, B, 80);
+  const k = Math.max(1, Math.floor(flightProgress * 80));
+  const cur = greatCirclePoint(A, B, flightProgress);
+  GlobeMap.setReach([]);
+  GlobeMap.setRouteBg(full);
+  GlobeMap.setRoute(full.slice(0, k + 1).concat([cur]));
+  const ahead = greatCirclePoint(A, B, Math.min(1, flightProgress + 0.01));
+  GlobeMap.showPlane(cur[0], cur[1], bearingDeg(cur, ahead));
+  GlobeMap.flyTo(cur[0], cur[1]);
+}
+
+// Overlays je nach Zustand neu zeichnen (vom Karten-Stilwechsel gerufen)
+function refreshOverlays() {
+  if (activeFlight) drawFlightOverlays();
+  else updateBookingOverlays();
 }
 function togglePause() {
   if (!activeFlight) return;
@@ -372,6 +399,13 @@ function renderDailyGoal() {
   $("#goal-fill").style.width = pct.toFixed(0) + "%";
   $("#goal-input").value = goal;
   $("#sound-toggle").checked = !!store.settings.sound;
+  $("#lock-toggle").checked = !!store.settings.lockReach;
+  renderStyleButtons();
+}
+function renderStyleButtons() {
+  $("#style-buttons").innerHTML = Object.keys(MAP_STYLES).map((key) =>
+    `<button class="style-btn ${key === store.settings.mapStyle ? "is-selected" : ""}" data-style="${key}">${MAP_STYLE_LABELS[key]}</button>`
+  ).join("");
 }
 function renderAchievements() {
   $("#ach-grid").innerHTML = ACHIEVEMENTS.map((a) => {
@@ -445,9 +479,11 @@ function wireEvents() {
   });
   $("#select-to").addEventListener("change", (e) => {
     const v = e.target.value;
+    if (blockedAsTarget(v)) { e.target.value = selection.to; return; }
     if (v === selection.from) selection.from = selection.to;
     selection.to = v; syncRoute();
   });
+  $("#random-btn").addEventListener("click", randomDestination);
   $("#swap-btn").addEventListener("click", () => {
     [selection.from, selection.to] = [selection.to, selection.from];
     recenterToOrigin(); syncRoute();
@@ -493,6 +529,15 @@ function wireEvents() {
   });
   $("#export-btn").addEventListener("click", exportData);
   $("#import-file").addEventListener("change", (e) => { if (e.target.files[0]) importData(e.target.files[0]); });
+  $("#lock-toggle").addEventListener("change", (e) => {
+    store.settings.lockReach = e.target.checked; saveData();
+  });
+  $("#style-buttons").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-style]"); if (!b) return;
+    store.settings.mapStyle = b.dataset.style; saveData();
+    renderStyleButtons();
+    if (mapReady) GlobeMap.setStyleUrl(MAP_STYLES[store.settings.mapStyle]);
+  });
 
   // Notiz speichern, sobald man das Feld verlaesst
   $("#flight-note").addEventListener("blur", saveFlightNote);
@@ -521,7 +566,8 @@ function startMap() {
   if (typeof maplibregl === "undefined") { showMapOffline(); return; }
   let ready = false;
   const timeout = setTimeout(() => { if (!ready) showMapOffline(); }, 9000);
-  GlobeMap.init(() => {
+  GlobeMap.setRedraw(refreshOverlays); // nach Stilwechsel Overlays neu zeichnen
+  GlobeMap.init(MAP_STYLES[store.settings.mapStyle], () => {
     ready = true;
     clearTimeout(timeout);
     hideMapOffline();
@@ -530,7 +576,7 @@ function startMap() {
     updateBookingOverlays();
     GlobeMap.flyTo(...coordOf(selection.from), 2.4);
     resumeIfActive();
-  });
+  }, () => {});
 }
 
 init();

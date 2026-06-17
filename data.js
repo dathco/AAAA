@@ -75,3 +75,12 @@ const ACHIEVEMENTS = [
 
 const STORAGE_KEY = "focusflight_v2";
 
+// Kostenlose Kartenstile (OpenFreeMap, kein API-Key)
+const MAP_STYLES = {
+  positron: "https://tiles.openfreemap.org/styles/positron",
+  bright:   "https://tiles.openfreemap.org/styles/bright",
+  liberty:  "https://tiles.openfreemap.org/styles/liberty",
+};
+const MAP_STYLE_LABELS = { positron: "Hell", bright: "Bunt", liberty: "Detail" };
+
+
